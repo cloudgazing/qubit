@@ -1,3 +1,5 @@
+//! A `CountDown` implementation that was part of `embedded_hall` 2.0.
+
 use rp2040_hal as hal;
 
 use hal::Timer;
@@ -21,6 +23,7 @@ impl CountDown {
 }
 
 impl CountDown {
+	/// Start the countdown.
 	pub fn start<T: Into<MicrosDurationU64>>(&mut self, count: T) {
 		self.period = count.into();
 
@@ -28,6 +31,8 @@ impl CountDown {
 		self.next_end = Some(next_end.wrapping_add(self.period.to_micros()));
 	}
 
+	/// "Blockingly" wait until the countdown is finished.
+	///
 	/// # Errors
 	///
 	/// Returns an error if the countdown is not finished. The recommended way to use this
@@ -52,6 +57,8 @@ impl CountDown {
 		}
 	}
 
+	/// Cancel the countdown.
+	///
 	/// # Errors
 	///
 	/// Returns an error if the countdown was not started.

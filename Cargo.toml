@@ -1,25 +1,42 @@
-[package]
-name = "kb_rs"
-version = "0.1.0"
-edition = "2024"
+[workspace]
+resolver = "2"
+members = [
+	"crates/kb_rs",
+	"crates/kb_rs_macro_derive",
+	"crates/keyboards",
+]
+default-members = ["crates/kb_rs"]
 
-[dependencies]
+[workspace.package]
+authors = ["cloudgazing"]
+edition = "2024"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[workspace.dependencies]
+# Workspace crates
+kb_rs = { path = "crates/kb_rs" }
+kb_rs_macro_derive = { path = "crates/kb_rs_macro_derive" }
+keyboards = { path = "crates/keyboards" }
+# External crates
 cortex-m = "0.7.7"
 cortex-m-rt = "0.7.5"
 defmt = "1.0.1"
 defmt-rtt = "1.0.0"
 embedded-hal = "1.0.0"
-# log = "0.4.27"
 panic-probe = { version = "1.0.0", features = ["print-defmt"] }
 rp2040-boot2 = "0.3.0"
-rp2040-hal = { version = "0.11.0", features = ["rt", "critical-section-impl"] }
+rp2040-hal = "0.11.0"
 usb-device = "0.3.2"
 usbd-hid = "0.8.2"
 usbd-serial = "0.2.2"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_arrays = "0.2.0"
+serde_json = "1.0.140"
+toml = "0.8.22"
 
-kb_rs_derive = { path = "./kb_rs_derive" }
+[workspace.lints.rust]
+unused_crate_dependencies = "warn"
 
-[features]
-default = ["dev", "marble"]
-dev = []
-marble = []
+[workspace.lints.clippy]
+pedantic = "warn"

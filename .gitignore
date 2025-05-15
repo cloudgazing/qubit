@@ -1,3 +1,12 @@
-/target
+# Rust
+**/target
 
+# macOS
 .DS_Store
+
+# IntelliJ
+.idea
+
+# Any general secrets
+.env
+.env.secret.toml

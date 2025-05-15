@@ -1,0 +1,19 @@
+[package]
+name = "keyboards"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+toml = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+# External crates
+anyhow = { version = "1.0.98", optional = true }
+
+[features]
+std = ["anyhow", "serde", "toml"]

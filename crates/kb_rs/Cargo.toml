@@ -1,0 +1,33 @@
+[package]
+description = "Keyboard firmware."
+name = "kb_rs"
+version = "0.1.0"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+kb_rs_macro_derive.workspace = true
+cortex-m.workspace = true
+cortex-m-rt.workspace = true
+defmt.workspace = true
+defmt-rtt.workspace = true
+embedded-hal.workspace = true
+panic-probe.workspace = true
+rp2040-boot2.workspace = true
+rp2040-hal = { workspace = true, features = ["rt", "critical-section-impl"] }
+usb-device.workspace = true
+usbd-hid.workspace = true
+usbd-serial = { workspace = true, optional = true }
+keyboards.workspace = true
+
+[build-dependencies]
+keyboards = { workspace = true, features = ["std"] }
+
+[features]
+default = ["serial"]
+serial = ["usbd-serial"]

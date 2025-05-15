@@ -1,3 +1,5 @@
+#![expect(clippy::doc_markdown)]
+
 //! USB HID Keyboard modifier masks and scan codes as per USB spec.
 
 // -- Modifier masks --

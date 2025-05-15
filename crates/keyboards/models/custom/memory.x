@@ -1,0 +1,38 @@
+/* These are just example values and should be changed to match the specific board configuration. */
+/* Check the link bellow for more info about how the linker script works. */
+/* https://github.com/wntrblm/Castor_and_Pollux/blob/main/firmware/scripts/samd21g18a.ld */
+
+FLASH_SIZE = 0x800000; /* 8MiB, 8,388,608 bytes */
+SRAM_SIZE =	0x42000; /* 264kB, 270,336 bytes */
+ROM_SIZE = 0x4000; /* 16kB, 16,384 bytes */
+
+BOOT2_SIZE = 0x100; /* 256 bytes */
+
+CONFIGURATION_SIZE = 0x19000; /* 100kB, 102,400 bytes */
+
+REMAINING_FLASH = FLASH_SIZE - BOOT2_SIZE - CONFIGURATION_SIZE;
+
+MEMORY {
+	BOOT2 (rx) : ORIGIN = 0x10000000, LENGTH = BOOT2_SIZE
+
+	FLASH (rx) : ORIGIN = ORIGIN(BOOT2) + LENGTH(BOOT2), LENGTH = REMAINING_FLASH
+
+	CONFIGURATION (r) : ORIGIN = ORIGIN(FLASH) + LENGTH(FLASH), LENGTH = CONFIGURATION_SIZE
+
+	RAM (rwx) : ORIGIN = 0x20000000, LENGTH = SRAM_SIZE
+}
+
+EXTERN(BOOT2_FIRMWARE)
+
+SECTIONS {
+	.boot2 ORIGIN(BOOT2) :
+	{
+		KEEP(*(.boot2));
+	} > BOOT2
+
+	/* Keyboard configuration section */
+	.keyboard_configuration ORIGIN(CONFIGURATION) :
+	{
+		KEEP(*(.keyboard_configuration));
+	} > CONFIGURATION
+} INSERT BEFORE .text;
