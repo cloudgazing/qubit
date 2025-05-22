@@ -44,6 +44,7 @@ use quote::{ToTokens, quote};
 use syn::{Expr, ExprArray, parse_macro_input};
 
 mod input;
+mod keymap;
 mod row_col;
 
 use input::{MatrixInput, MatrixInputWithEnv};
@@ -137,7 +138,14 @@ fn get_new_method(rows: &ExprArray, cols: &ExprArray) -> proc_macro2::TokenStrea
 /// if it's low, then drive the row pin back up. This is repeated for every row and for
 /// efficiency the key positions marked as empty in the layout (0x00) are skipped.
 fn get_generate_key_report_method(rows: &ExprArray, layout: &ExprArray) -> proc_macro2::TokenStream {
+	// Get the total amount of keys and from that find out how many keymaps we need to use.
+	//
+	// TODO: Don't use env here.
+	let keys_count = keymap::get_keymap_size(layout);
+
 	let row_len = rows.elems.len();
+
+	let mut bit_pos = 0_usize;
 
 	let check_keys = layout.elems.iter().enumerate().map(|(row_index, row)| {
 		let Expr::Array(cols_arr_expr) = row else {
@@ -153,10 +161,14 @@ fn get_generate_key_report_method(rows: &ExprArray, layout: &ExprArray) -> proc_
 			if literal_number != 0 {
 				let col_name = row_col::col_field_name(col_index);
 
+				let pos = bit_pos;
+
+				bit_pos += 1;
+
 				quote! {
 					// check the col here and store the position if the pin is low
 					if self.#col_name.is_low().unwrap() {
-						is_pressed = true;
+						bitmaps[const { #pos / SIZE }] |= 1 << const { #pos % SIZE };
 					}
 				}
 			} else {
@@ -191,14 +203,14 @@ fn get_generate_key_report_method(rows: &ExprArray, layout: &ExprArray) -> proc_
 
 	quote! {
 		#[doc = r"Checks every pin looking for pressed keys and returns a `KeyboardReport`."]
-		pub fn generate_key_report(&mut self) -> Option<KeyboardReport> {
-			// for now I just set is_pressed to true, but I need to store the coordinates
-			// for the pressed key somehow and at the end return them
-			let mut is_pressed = false;
+		pub fn get_pressed_keys(&mut self) -> [usize; #keys_count.div_ceil(usize::BITS as usize)] {
+			const SIZE: usize = usize::BITS as usize;
+
+			let mut bitmaps = [0_usize; #keys_count.div_ceil(usize::BITS as usize)];
 
 			#(#check_keys)*
 
-			if is_pressed { Some(get_key_report()) } else { None }
+			bitmaps
 		}
 	}
 }

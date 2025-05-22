@@ -7,9 +7,11 @@ use hal::usb::UsbBus;
 use usb_device::bus::UsbBusAllocator;
 use usb_device::device::{StringDescriptors, UsbDevice, UsbDeviceBuilder, UsbVidPid};
 use usbd_hid::descriptor::{KeyboardReport, SerializedDescriptor};
-use usbd_hid::hid_class::HIDClass;
+use usbd_hid::hid_class::{HIDClass, ReportType};
 #[cfg(feature = "serial")]
 use usbd_serial::SerialPort;
+#[cfg(feature = "serial")]
+use usbd_serial::embedded_io::WriteReady;
 
 const USB_VID: u16 = 0x16C0;
 const USB_PID: u16 = 0x27DD;
@@ -87,9 +89,11 @@ impl UsbDeviceInstance<'_> {
 		UsbDeviceInstance { _marker: PhantomData }
 	}
 
-	// Send a keyboard report.
-	//
-	// The report is written inside interrupt-free context.
+	/// Send a keyboard report.
+	///
+	/// The report is written inside interrupt-free context.
+	// Allow this because I want the caller to get a device instance to send reports.
+	#[allow(clippy::unused_self)]
 	pub fn send_keyboard_report(&self, report: &KeyboardReport) {
 		cortex_m::interrupt::free(|_| {
 			// Safety: We execute this inside the critical section which prevents two mutable references
@@ -100,9 +104,13 @@ impl UsbDeviceInstance<'_> {
 		});
 	}
 
-	// Send a serial message by writing bytes into the port.
-	//
-	// The data written inside interrupt-free context.
+	// TODO: Maybe delegate the serial messaging to logger or something similar to make it easier
+	// (and safer) to use.
+	/// Send a serial message by writing bytes into the port.
+	///
+	/// The data written inside interrupt-free context.
+	// Allow this because I want the caller to get a device instance to send serial messages.
+	#[allow(clippy::unused_self)]
 	#[cfg(feature = "serial")]
 	pub fn send_serial_message(&self, msg: &[u8]) {
 		cortex_m::interrupt::free(|_| {
@@ -191,9 +199,37 @@ pub unsafe fn poll_usb_device() {
 	#[cfg(feature = "serial")]
 	let serial_port = unsafe { get_serial_port_ref_mut() };
 
-	_ = !device.poll(&mut [
+	// The classes are passed in the same order they were configured in.
+	let has_new_data = device.poll(&mut [
 		hid_class,
 		#[cfg(feature = "serial")]
 		serial_port,
 	]);
+
+	#[cfg(feature = "serial")]
+	if serial_port.write_ready().is_err() {
+		return;
+	}
+
+	if has_new_data {
+		let mut buf = [0_u8; 64];
+
+		if let Ok(report_info) = hid_class.pull_raw_report(&mut buf) {
+			#[cfg(feature = "serial")]
+			match report_info.report_type {
+				ReportType::Feature => {
+					_ = serial_port.write(b"got some feature report data!!\n");
+				}
+				ReportType::Input => {
+					_ = serial_port.write(b"got some input report data!!\n");
+				}
+				ReportType::Output => {
+					_ = serial_port.write(b"got some output report data!!\n");
+				}
+				ReportType::Reserved => {
+					_ = serial_port.write(b"got some reserved report data!!\n");
+				}
+			}
+		}
+	}
 }

@@ -62,6 +62,7 @@ impl CountDown {
 	/// # Errors
 	///
 	/// Returns an error if the countdown was not started.
+	#[allow(dead_code)] // Allow for now as I might use this method at some point.
 	pub fn cancel(&mut self) -> Result<(), &'static str> {
 		if self.next_end.is_none() {
 			Err("CountDown is not running.")

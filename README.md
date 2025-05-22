@@ -38,8 +38,9 @@ See the instructions [here](./crates/keyboards/models/custom/README.md). (not fi
 - add LED support
 - add N-Key rollover support
 - add support for storing and updating data to non-volatile storage
-- other stuff
+- add set and get feature reports for fetching and updating settings.
 - choose a better name for this project
+- other stuff
 
 ---
 

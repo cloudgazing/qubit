@@ -19,15 +19,23 @@ use keyboard::KeyboardMatrix;
 use usb_device::bus::UsbBusAllocator;
 
 use kb_rs_macro_derive::define_configuration;
-use keyboards::config::Configuration;
+use usbd_hid::descriptor::KeyboardReport;
 
-pub mod keyboard;
-mod misc;
-pub mod time;
-pub mod usb;
+mod keyboard;
+mod keymap;
+mod parse;
+mod report;
+mod time;
+mod usb;
 
-const R: usize = misc::parse_env_usize(env!("CONFIG_KEYMAP_ROW_COUNT"));
-const C: usize = misc::parse_env_usize(env!("CONFIG_KEYMAP_COL_COUNT"));
+/// External high-speed crystal on the Raspberry Pi Pico board is 12 MHz.
+const XOSC_CRYSTAL_FREQ: u32 = 12_000_000;
+
+const KM_SIZE: usize = parse::str_to_usize(env!("CONFIG_KEYMAP_SIZE"));
+
+type Keymap = keyboards::config::Keymap<KM_SIZE>;
+
+type Configuration = keyboards::config::Configuration<KM_SIZE>;
 
 #[used]
 #[unsafe(link_section = ".boot2")]
@@ -36,7 +44,7 @@ pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_GENERIC_03H;
 #[rustfmt::skip]
 #[used]
 #[unsafe(link_section = ".keyboard_configuration")]
-pub static CONFIGURATION: Configuration<R, C> = define_configuration!(
+pub static CONFIGURATION: Configuration = define_configuration!(
 	CONFIG_NAME,
 	CONFIG_AUTHOR,
 	CONFIG_ID,
@@ -48,11 +56,8 @@ const _: () = {
 	// Check that the configuration we use fits in the link section.
 	const CONFIG_SECTION_SIZE: usize = 0x19000;
 
-	assert!(core::mem::size_of::<Configuration<R, C>>() <= CONFIG_SECTION_SIZE);
+	assert!(core::mem::size_of::<Configuration>() <= CONFIG_SECTION_SIZE);
 };
-
-/// External high-speed crystal on the Raspberry Pi Pico board is 12 MHz.
-const XOSC_CRYSTAL_FREQ: u32 = 12_000_000;
 
 #[hal::entry]
 fn main_entry() -> ! {
@@ -84,7 +89,16 @@ fn main() -> ! {
 
 	let pins = hal::gpio::Pins::new(pac.IO_BANK0, pac.PADS_BANK0, sio.gpio_bank0, &mut pac.RESETS);
 
-	// Get the stored or default keymap configuration.
+	// Take ownership of this reserved pin to prevent it's use.
+	#[allow(clippy::no_effect_underscore_binding)]
+	let _reserved_pin = pins.gpio15;
+
+	// We use the LED to verify that the initialization was successful by turning it off after.
+	let mut led_pin = pins.gpio25.into_push_pull_output();
+	led_pin.set_high().unwrap();
+
+	// SAFETY: Keymap gets initalized only once.
+	unsafe { keymap::initialize_active_keymap() };
 
 	// TODO: Remove these pins declarations once storing the configuration is implmented.
 	// Column pins
@@ -114,14 +128,6 @@ fn main() -> ! {
 		(c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13),
 	);
 
-	// Take ownership of this reserved pin to prevent it's use.
-	#[allow(clippy::no_effect_underscore_binding)]
-	let _reserved_pin = pins.gpio15;
-
-	// We use the LED to verify that the initialization was successful by turning it off after.
-	let mut led_pin = pins.gpio25.into_push_pull_output();
-	led_pin.set_high().unwrap();
-
 	let usb_alloc = UsbBusAllocator::new(hal::usb::UsbBus::new(
 		pac.USBCTRL_REGS,
 		pac.USBCTRL_DPRAM,
@@ -146,43 +152,28 @@ fn main() -> ! {
 		usb_dev.send_serial_message("Listening:\n".as_bytes());
 	}
 
-	// TODO: just for testing
-	#[cfg(feature = "serial")]
-	{
-		unsafe {
-			let p = 0x1000_0000 + 0x100 + (0x0080_0000 - 0x100 - 0x19000);
-			let ptr = p as *const Configuration<R, C>;
-
-			let config = &*ptr;
-
-			usb_dev.send_serial_message("Board name: ".as_bytes());
-			usb_dev.send_serial_message(config.name.as_bytes());
-			usb_dev.send_serial_message("\n".as_bytes());
-			usb_dev.send_serial_message("Author name: ".as_bytes());
-			usb_dev.send_serial_message(config.author.as_bytes());
-			usb_dev.send_serial_message("\n".as_bytes());
-			usb_dev.send_serial_message("Version: ".as_bytes());
-			usb_dev.send_serial_message(config.version.as_bytes());
-			usb_dev.send_serial_message("\n".as_bytes());
-		}
-	}
-	// remove the code above when done
-
 	// Counter used for the interval at which to check for pressed keys.
 	let mut count_down = time::CountDown::new(timer);
 	count_down.start(hal::fugit::MicrosDurationU64::millis(10));
 
 	led_pin.set_low().unwrap();
 
+	let mut prev_keyboard_report = KeyboardReport::default();
+
 	loop {
 		if count_down.wait().is_ok() {
-			if let Some(report) = kb_matrix.generate_key_report() {
+			let pressed_keys = kb_matrix.get_pressed_keys();
+
+			// SAFETY: The active keymap was initialized before this call.
+			let report = unsafe { report::construct_keyboard_report(pressed_keys) };
+
+			if report != prev_keyboard_report {
 				usb_dev.send_keyboard_report(&report);
+
 				#[cfg(feature = "serial")]
-				usb_dev.send_serial_message("Key sent!!\n".as_bytes());
-			} else {
-				#[cfg(feature = "serial")]
-				usb_dev.send_keyboard_report(&keyboard::get_end_keyboard_report());
+				usb_dev.send_serial_message(b"SENT REPORT\n");
+
+				prev_keyboard_report = report;
 			}
 		}
 	}

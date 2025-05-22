@@ -1,7 +1,6 @@
 //! Keyboard definition and related functions.
 
 use rp2040_hal as hal;
-use usbd_hid::descriptor::{KeyboardReport, KeyboardUsage};
 
 // Column
 type C0 = hal::gpio::bank0::Gpio0;
@@ -29,26 +28,5 @@ type R4 = hal::gpio::bank0::Gpio20;
 kb_rs_macro_derive::define_pin_matrix_env_keymap!(
 	[R0, R1, R2, R3, R4],
 	[C0, C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13],
-	CONFIG_KEYMAP
+	CONFIG_LAYOUT_KEYMAP
 );
-
-fn get_key_report() -> KeyboardReport {
-	let first_letter = KeyboardUsage::KeyboardQq as u8;
-
-	KeyboardReport {
-		modifier: 0x00,
-		reserved: 0,
-		leds: 0,
-		keycodes: [first_letter, 0x00, 0x00, 0x00, 0x00, 0x00],
-	}
-}
-
-#[must_use]
-pub fn get_end_keyboard_report() -> KeyboardReport {
-	KeyboardReport {
-		modifier: 0x00,
-		reserved: 0,
-		leds: 0,
-		keycodes: [0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
-	}
-}

@@ -13,6 +13,12 @@ edition = "2024"
 license = "MIT OR Apache-2.0"
 publish = false
 
+[profile.release]
+codegen-units = 1
+lto = true
+panic = "abort"
+strip = true
+
 [workspace.dependencies]
 # Workspace crates
 kb_rs = { path = "crates/kb_rs" }
