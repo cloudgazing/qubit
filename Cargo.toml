@@ -25,7 +25,7 @@ kb_rs = { path = "crates/kb_rs" }
 kb_rs_macro_derive = { path = "crates/kb_rs_macro_derive" }
 keyboards = { path = "crates/keyboards" }
 # External crates
-cortex-m = "0.7.7"
+cortex-m = { version = "0.7.7", features = ["inline-asm"] }
 cortex-m-rt = "0.7.5"
 defmt = "1.0.1"
 defmt-rtt = "1.0.0"

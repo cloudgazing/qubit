@@ -24,9 +24,9 @@ type R2 = hal::gpio::bank0::Gpio18;
 type R3 = hal::gpio::bank0::Gpio19;
 type R4 = hal::gpio::bank0::Gpio20;
 
-#[rustfmt::skip]
-kb_rs_macro_derive::define_pin_matrix_env_keymap!(
-	[R0, R1, R2, R3, R4],
-	[C0, C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13],
-	CONFIG_LAYOUT_KEYMAP
-);
+#[kb_rs_macro_derive::kb_pin_matrix]
+#[kb_pin_matrix(env(layout = "CONFIG_LAYOUT_KEYMAP"))]
+pub struct KeyboardMatrix {
+	rows: (R0, R1, R2, R3, R4),
+	cols: (C0, C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13),
+}

@@ -1,6 +1,6 @@
 use core::num::NonZeroU8;
 
-use keyboards::keycodes::{KEY_A, KEY_RIGHTMETA, KEY_RIGHTSHIFT};
+use keyboards::keycodes::{KEY_A, KEY_LEFTCTRL, KEY_RIGHTMETA};
 use usbd_hid::descriptor::KeyboardReport;
 
 use crate::keymap;
@@ -16,7 +16,7 @@ fn is_normal_key(key_code: NonZeroU8) -> bool {
 /// Checks if the keycode matches a modifier scan code and turns it into it's modifier mask
 /// counterpart.
 fn is_modifier_key(key_code: NonZeroU8) -> Option<NonZeroU8> {
-	if key_code >= KEY_RIGHTSHIFT && key_code <= KEY_RIGHTMETA {
+	if key_code >= KEY_LEFTCTRL && key_code <= KEY_RIGHTMETA {
 		let modifier_mask: u8 = 1 << (key_code.get() & 0x07);
 
 		// Safety: This is guaranteed to be non-zero since a bitand with the 0x07 mask will always result in

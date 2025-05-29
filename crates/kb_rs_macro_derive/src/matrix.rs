@@ -41,37 +41,97 @@
 use proc_macro::TokenStream;
 
 use quote::{ToTokens, quote};
-use syn::{Expr, ExprArray, parse_macro_input};
+use syn::{Expr, ExprArray, Ident, ItemStruct, Visibility};
+use syn::{ExprTuple, parse_macro_input};
 
-mod input;
 mod keymap;
+mod parse;
 mod row_col;
 
-use input::{MatrixInput, MatrixInputWithEnv};
+pub fn kb_pin_matrix_macro(_args: TokenStream, item: TokenStream) -> TokenStream {
+	let input = parse_macro_input!(item as ItemStruct);
 
-pub fn define_pin_matrix_macro(input: TokenStream) -> TokenStream {
-	let ast = parse_macro_input!(input as MatrixInput);
+	let parsed_attrs = parse::parse_attributes(input.attrs).unwrap();
+	let parsed_fields = parse::parse_fields(input.fields).unwrap();
 
-	define_pin_matrix(&ast.rows, &ast.cols, &ast.layout)
-}
+	let delay_value = parsed_attrs.delay.unwrap_or(35);
 
-pub fn define_pin_matrix_env_keymap_macro(input: TokenStream) -> TokenStream {
-	let ast = parse_macro_input!(input as MatrixInputWithEnv);
+	let rows = {
+		let mut rows: Option<ExprArray> = None;
 
-	let Ok(layout_str) = std::env::var(ast.layout_env.to_string()) else {
-		panic!("Missing env value {}", ast.layout_env);
+		if let Some(rows_type) = parsed_fields.rows {
+			let tuple_tokens = rows_type.into_token_stream();
+			let tuple_expr: ExprTuple = syn::parse2(tuple_tokens).unwrap();
+
+			let arr_expr = ExprArray {
+				attrs: tuple_expr.attrs,
+				bracket_token: syn::token::Bracket::default(),
+				elems: tuple_expr.elems,
+			};
+
+			rows = Some(arr_expr);
+		}
+
+		if let Some(env_key) = parsed_attrs.env.rows {
+			let rows_arr = parse::parse_env_val_to_expr_arr(&env_key).unwrap();
+
+			if rows.replace(rows_arr).is_some() {
+				panic!("'rows' field already provided.");
+			}
+		}
+
+		rows.expect("Missing rows definition.")
 	};
 
-	let layout: ExprArray = syn::parse_str(&layout_str).expect("Failed to parse str into an array expr");
+	let cols = {
+		let mut cols: Option<ExprArray> = None;
 
-	define_pin_matrix(&ast.rows, &ast.cols, &layout)
-}
+		if let Some(cols_type) = parsed_fields.cols {
+			let tuple_tokens = cols_type.into_token_stream();
+			let tuple_expr: ExprTuple = syn::parse2(tuple_tokens).unwrap();
 
-fn define_pin_matrix(rows: &ExprArray, cols: &ExprArray, layout: &ExprArray) -> TokenStream {
-	let row_len = rows.elems.len();
-	let col_len = cols.elems.len();
+			let arr_expr = ExprArray {
+				attrs: tuple_expr.attrs,
+				bracket_token: syn::token::Bracket::default(),
+				elems: tuple_expr.elems,
+			};
 
-	row_col::validate_layout(row_len, col_len, layout);
+			cols = Some(arr_expr);
+		}
+
+		if let Some(env_key) = parsed_attrs.env.cols {
+			let cols_arr = parse::parse_env_val_to_expr_arr(&env_key).unwrap();
+
+			if cols.replace(cols_arr).is_some() {
+				panic!("'cols' field already provided.");
+			}
+		}
+
+		cols.expect("Missing cols definition.")
+	};
+
+	let layout = {
+		let mut layout: Option<ExprArray> = None;
+
+		if let Some(_layout_type) = parsed_fields.layout {
+			todo!();
+		}
+
+		if let Some(env_key) = parsed_attrs.env.layout {
+			let layout_arr = parse::parse_env_val_to_expr_arr(&env_key).unwrap();
+
+			if layout.replace(layout_arr).is_some() {
+				panic!("'layout' field already provided.");
+			}
+		}
+
+		layout.expect("Missing layout definition.")
+	};
+
+	row_col::validate_layout(rows.elems.len(), cols.elems.len(), &layout);
+
+	let visibility = input.vis;
+	let struct_name = input.ident;
 
 	// Include needed imports.
 	let imports_tokens = quote! {
@@ -79,16 +139,15 @@ fn define_pin_matrix(rows: &ExprArray, cols: &ExprArray, layout: &ExprArray) -> 
 		use embedded_hal::digital::{InputPin, OutputPin};
 	};
 
-	// Generate the struct definition.
-	let definition_tokens = get_fn_definition(rows, cols);
+	let struct_definition = define_struct_definition(&visibility, &struct_name, &rows, &cols);
 
 	// Generate struct implemenation.
-	let impl_tokens = {
-		let new_method = get_new_method(rows, cols);
-		let generate_key_report_method = get_generate_key_report_method(rows, layout);
+	let struct_impl = {
+		let new_method = define_new_method(&visibility, &rows, &cols);
+		let generate_key_report_method = define_get_pressed_keys_method(&visibility, &layout, delay_value);
 
 		quote! {
-			impl KeyboardMatrix {
+			impl #struct_name {
 				#new_method
 				#generate_key_report_method
 			}
@@ -97,19 +156,24 @@ fn define_pin_matrix(rows: &ExprArray, cols: &ExprArray, layout: &ExprArray) -> 
 
 	quote! {
 		#imports_tokens
-		#definition_tokens
-		#impl_tokens
+		#struct_definition
+		#struct_impl
 	}
 	.into()
 }
 
 /// Generates the basic struct definition.
-fn get_fn_definition(rows: &ExprArray, cols: &ExprArray) -> proc_macro2::TokenStream {
+fn define_struct_definition(
+	visibility: &Visibility,
+	struct_name: &Ident,
+	rows: &ExprArray,
+	cols: &ExprArray,
+) -> proc_macro2::TokenStream {
 	let row_fields = row_col::map_row_fields(rows);
 	let col_fields = row_col::map_col_fields(cols);
 
 	quote! {
-		pub struct KeyboardMatrix {
+		#visibility struct #struct_name {
 			#row_fields
 			#col_fields
 		}
@@ -117,13 +181,13 @@ fn get_fn_definition(rows: &ExprArray, cols: &ExprArray) -> proc_macro2::TokenSt
 }
 
 /// Generates the new method used to construct the matrix.
-fn get_new_method(rows: &ExprArray, cols: &ExprArray) -> proc_macro2::TokenStream {
+fn define_new_method(visibility: &Visibility, rows: &ExprArray, cols: &ExprArray) -> proc_macro2::TokenStream {
 	let (row_args, row_fields) = row_col::map_rows_new(rows);
 	let (col_args, col_fields) = row_col::map_cols_new(cols);
 
 	quote! {
 		#[must_use]
-		pub fn new(rows: #row_args, cols: #col_args) -> Self {
+		#visibility fn new(rows: #row_args, cols: #col_args) -> Self {
 			Self {
 				#row_fields
 				#col_fields
@@ -137,13 +201,9 @@ fn get_new_method(rows: &ExprArray, cols: &ExprArray) -> proc_macro2::TokenStrea
 /// To check which keys are pressed, we drive the row pin to low, check each column pin
 /// if it's low, then drive the row pin back up. This is repeated for every row and for
 /// efficiency the key positions marked as empty in the layout (0x00) are skipped.
-fn get_generate_key_report_method(rows: &ExprArray, layout: &ExprArray) -> proc_macro2::TokenStream {
+fn define_get_pressed_keys_method(visibility: &Visibility, layout: &ExprArray, delay: u32) -> proc_macro2::TokenStream {
 	// Get the total amount of keys and from that find out how many keymaps we need to use.
-	//
-	// TODO: Don't use env here.
 	let keys_count = keymap::get_keymap_size(layout);
-
-	let row_len = rows.elems.len();
 
 	let mut bit_pos = 0_usize;
 
@@ -182,28 +242,22 @@ fn get_generate_key_report_method(rows: &ExprArray, layout: &ExprArray) -> proc_
 
 		let row_name = row_col::row_field_name(row_index);
 
-		// We add some delay after each row check, skipping the last one.
-		let delay = if row_index == row_len - 1 {
-			// add a delay of 1ms or something here
-			quote! {}
-		} else {
-			quote! {}
-		};
-
 		quote! {
 			self.#row_name.set_low().unwrap();
+
+			// TODO: Experiment with the delay and find the right value.
+			// For now a min of 35 cycles works
+			::cortex_m::asm::delay(#delay);
 
 			#(#check_col_keys)*
 
 			self.#row_name.set_high().unwrap();
-
-			#delay
 		}
 	});
 
 	quote! {
 		#[doc = r"Checks every pin looking for pressed keys and returns a `KeyboardReport`."]
-		pub fn get_pressed_keys(&mut self) -> [usize; #keys_count.div_ceil(usize::BITS as usize)] {
+		#visibility fn get_pressed_keys(&mut self) -> [usize; #keys_count.div_ceil(usize::BITS as usize)] {
 			const SIZE: usize = usize::BITS as usize;
 
 			let mut bitmaps = [0_usize; #keys_count.div_ceil(usize::BITS as usize)];
