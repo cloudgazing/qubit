@@ -1,11 +1,7 @@
 [workspace]
-resolver = "2"
-members = [
-	"crates/kb_rs",
-	"crates/kb_rs_macro_derive",
-	"crates/keyboards",
-]
-default-members = ["crates/kb_rs"]
+resolver = "3"
+members = ["crates/qubit", "crates/qubit_macros", "crates/keyboards"]
+default-members = ["crates/qubit"]
 
 [workspace.package]
 authors = ["cloudgazing"]
@@ -21,8 +17,8 @@ strip = true
 
 [workspace.dependencies]
 # Workspace crates
-kb_rs = { path = "crates/kb_rs" }
-kb_rs_macro_derive = { path = "crates/kb_rs_macro_derive" }
+qubit = { path = "crates/qubit" }
+qubit_macros = { path = "crates/qubit_macros" }
 keyboards = { path = "crates/keyboards" }
 # External crates
 cortex-m = { version = "0.7.7", features = ["inline-asm"] }

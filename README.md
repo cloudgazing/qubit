@@ -1,13 +1,17 @@
-**WIP**
+# Qubit
 
-# Keyboard firmware for the rp2040 chip.
+Keyboard firmware with a variety of features, for different microcontrollers.
+
+> [!NOTE]
+> This project is still **work in progress**, those features are still being worked on and currently
+the only chip supported is the RP2040 :).
 
 ## Firmware
 
 | Size(kB) | Profile | Model      |
 | -------- | ------- | ---------- |
-| 344.5    | dev     | MoonQuartz |
-| 64.5     | release | MoonQuartz |
+| 352.5    | dev     | MoonQuartz |
+| 56.5     | release | MoonQuartz |
 
 ## Building the firmware
 
@@ -18,7 +22,7 @@
 2. Add the `thumbv6m-none-eabi` toolchain by running `rustup target add thumbv6m-none-eabi`
 3. Install [elf2uf2-rs](https://github.com/JoNil/elf2uf2-rs) by running `cargo install elf2uf2-rs`
 4. Run `cargo build -r` to build the firmware.
-5. Convert the elf to uf2 by running `elf2uf2-rs target/thumbv6m-none-eabi/release/kb_rs kb_rs.uf2`.
+5. Convert the elf to uf2 by running `elf2uf2-rs target/thumbv6m-none-eabi/release/qubit qubit.uf2`.
 
 ## Uploading the firmware on your board
 
@@ -39,7 +43,6 @@ See the instructions [here](./crates/keyboards/models/custom/README.md). (not fi
 - add N-Key rollover support
 - add support for storing and updating data to non-volatile storage
 - add set and get feature reports for fetching and updating settings.
-- choose a better name for this project
 - other stuff
 
 ---

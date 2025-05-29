@@ -18,7 +18,7 @@ use hal::pac::interrupt;
 use keyboard::KeyboardMatrix;
 use usb_device::bus::UsbBusAllocator;
 
-use kb_rs_macro_derive::define_configuration;
+use qubit_macros::define_configuration;
 use usbd_hid::descriptor::KeyboardReport;
 
 mod keyboard;

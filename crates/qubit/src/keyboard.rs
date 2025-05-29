@@ -24,7 +24,7 @@ type R2 = hal::gpio::bank0::Gpio18;
 type R3 = hal::gpio::bank0::Gpio19;
 type R4 = hal::gpio::bank0::Gpio20;
 
-#[kb_rs_macro_derive::kb_pin_matrix]
+#[qubit_macros::kb_pin_matrix]
 #[kb_pin_matrix(env(layout = "CONFIG_LAYOUT_KEYMAP"))]
 pub struct KeyboardMatrix {
 	rows: (R0, R1, R2, R3, R4),

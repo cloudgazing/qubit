@@ -1,6 +1,6 @@
 [package]
-description = "Proc Macros for kb_rs"
-name = "kb_rs_macro_derive"
+description = "Macros for Qubit"
+name = "qubit_macros"
 version = "0.1.0"
 authors.workspace = true
 edition.workspace = true

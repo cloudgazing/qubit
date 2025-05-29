@@ -1,6 +1,6 @@
 [package]
-description = "Keyboard firmware."
-name = "kb_rs"
+description = "Qubit Keyboard Firmware."
+name = "qubit"
 version = "0.1.0"
 authors.workspace = true
 edition.workspace = true
@@ -11,7 +11,7 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-kb_rs_macro_derive.workspace = true
+qubit_macros.workspace = true
 cortex-m.workspace = true
 cortex-m-rt.workspace = true
 defmt.workspace = true
