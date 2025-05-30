@@ -1,10 +1,11 @@
-//! A `CountDown` implementation that was part of `embedded_hall` 2.0.
+//! A module which defines time related implementations.
 
 use rp2040_hal as hal;
 
 use hal::Timer;
 use hal::fugit::MicrosDurationU64;
 
+/// A `CountDown` implementation that was part of `embedded_hall` 2.0.
 pub struct CountDown {
 	timer: Timer,
 	period: MicrosDurationU64,
@@ -50,7 +51,7 @@ impl CountDown {
 
 				Ok(())
 			} else {
-				Err("something ")
+				Err("not finished")
 			}
 		} else {
 			panic!("CountDown not started!");

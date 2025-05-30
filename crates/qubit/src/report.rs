@@ -1,9 +1,13 @@
+//! A module for constructing a keyboard reports.
+
 use core::num::NonZeroU8;
 
 use keyboards::keycodes::{KEY_A, KEY_LEFTCTRL, KEY_RIGHTMETA};
 use usbd_hid::descriptor::KeyboardReport;
 
 use crate::keymap;
+
+const PRESSED_BITMAPS_SIZE: usize = crate::KM_SIZE.div_ceil(usize::BITS as usize);
 
 /// Checks the keycode is within the range of "normal" codes.
 fn is_normal_key(key_code: NonZeroU8) -> bool {
@@ -28,8 +32,6 @@ fn is_modifier_key(key_code: NonZeroU8) -> Option<NonZeroU8> {
 		None
 	}
 }
-
-const PRESSED_BITMAPS_SIZE: usize = crate::KM_SIZE.div_ceil(usize::BITS as usize);
 
 /// # Safety
 ///
@@ -78,4 +80,3 @@ pub unsafe fn construct_keyboard_report(pressed_bitmaps: [usize; PRESSED_BITMAPS
 		keycodes,
 	}
 }
-// hnu6 ab

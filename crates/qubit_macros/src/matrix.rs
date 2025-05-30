@@ -38,6 +38,7 @@
 //!
 //! ```
 
+use parse::{Hal, ParsedFields};
 use proc_macro::TokenStream;
 
 use quote::{ToTokens, quote};
@@ -48,13 +49,23 @@ mod keymap;
 mod parse;
 mod row_col;
 
-pub fn kb_pin_matrix_macro(_args: TokenStream, item: TokenStream) -> TokenStream {
+pub fn kb_pin_matrix_macro(args: TokenStream, item: TokenStream) -> TokenStream {
 	let input = parse_macro_input!(item as ItemStruct);
 
-	let parsed_attrs = parse::parse_attributes(input.attrs).unwrap();
-	let parsed_fields = parse::parse_fields(input.fields).unwrap();
+	let parsed_attrs = parse_macro_input!(args as parse::Attributes);
+	let parsed_fields = match input.fields {
+		syn::Fields::Named(named_fields) => {
+			let tokens: TokenStream = named_fields.named.into_token_stream().into();
 
-	let delay_value = parsed_attrs.delay.unwrap_or(35);
+			parse_macro_input!(tokens as ParsedFields)
+		}
+		_ => parse::ParsedFields::default(),
+	};
+
+	// TODO: Experiment with the delay and find the right value.
+	// For now a min of 35 cycles works.
+	// let delay_value = parsed_attrs.delay.unwrap_or(35);
+	let delay_value = parsed_attrs.delay;
 
 	let rows = {
 		let mut rows: Option<ExprArray> = None;
@@ -75,12 +86,13 @@ pub fn kb_pin_matrix_macro(_args: TokenStream, item: TokenStream) -> TokenStream
 		if let Some(env_key) = parsed_attrs.env.rows {
 			let rows_arr = parse::parse_env_val_to_expr_arr(&env_key).unwrap();
 
-			if rows.replace(rows_arr).is_some() {
-				panic!("'rows' field already provided.");
-			}
+			let prev_value = rows.replace(rows_arr);
+
+			assert!(prev_value.is_none(), "'rows' field already provided.");
 		}
 
-		rows.expect("Missing rows definition.")
+		rows.expect("Missing cols definition.")
+		// rows.ok_or(syn::Error::new(proc_macro2::Span::call_site(), "Missing rows definition.")).unwrap()
 	};
 
 	let cols = {
@@ -102,9 +114,9 @@ pub fn kb_pin_matrix_macro(_args: TokenStream, item: TokenStream) -> TokenStream
 		if let Some(env_key) = parsed_attrs.env.cols {
 			let cols_arr = parse::parse_env_val_to_expr_arr(&env_key).unwrap();
 
-			if cols.replace(cols_arr).is_some() {
-				panic!("'cols' field already provided.");
-			}
+			let prev_value = cols.replace(cols_arr);
+
+			assert!(prev_value.is_none(), "'cols' field already provided.");
 		}
 
 		cols.expect("Missing cols definition.")
@@ -120,9 +132,9 @@ pub fn kb_pin_matrix_macro(_args: TokenStream, item: TokenStream) -> TokenStream
 		if let Some(env_key) = parsed_attrs.env.layout {
 			let layout_arr = parse::parse_env_val_to_expr_arr(&env_key).unwrap();
 
-			if layout.replace(layout_arr).is_some() {
-				panic!("'layout' field already provided.");
-			}
+			let prev_value = layout.replace(layout_arr);
+
+			assert!(prev_value.is_none(), "'layout' field already provided.");
 		}
 
 		layout.expect("Missing layout definition.")
@@ -134,10 +146,7 @@ pub fn kb_pin_matrix_macro(_args: TokenStream, item: TokenStream) -> TokenStream
 	let struct_name = input.ident;
 
 	// Include needed imports.
-	let imports_tokens = quote! {
-		use hal::gpio::{Pin, FunctionSio, SioInput, SioOutput, PullUp, PullDown, PinState, FunctionNull};
-		use embedded_hal::digital::{InputPin, OutputPin};
-	};
+	let imports_tokens = define_imports(&parsed_attrs.hal);
 
 	let struct_definition = define_struct_definition(&visibility, &struct_name, &rows, &cols);
 
@@ -160,6 +169,17 @@ pub fn kb_pin_matrix_macro(_args: TokenStream, item: TokenStream) -> TokenStream
 		#struct_impl
 	}
 	.into()
+}
+
+fn define_imports(hal: &parse::Hal) -> proc_macro2::TokenStream {
+	match hal {
+		Hal::Rp2040hal => {
+			quote! {
+				use ::rp2040_hal::gpio::{FunctionNull, FunctionSio, FunctionSioInput, FunctionSioOutput, Pin, PinState, PullDown, PullUp};
+				use ::embedded_hal::digital::{InputPin, OutputPin};
+			}
+		}
+	}
 }
 
 /// Generates the basic struct definition.
@@ -245,8 +265,6 @@ fn define_get_pressed_keys_method(visibility: &Visibility, layout: &ExprArray, d
 		quote! {
 			self.#row_name.set_low().unwrap();
 
-			// TODO: Experiment with the delay and find the right value.
-			// For now a min of 35 cycles works
 			::cortex_m::asm::delay(#delay);
 
 			#(#check_col_keys)*

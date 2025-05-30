@@ -1,16 +1,157 @@
-use syn::{ExprArray, LitInt, LitStr, Type, TypeTuple};
+use std::str::FromStr;
+
+use syn::parenthesized;
+use syn::{ExprArray, Ident, LitInt, LitStr, Token, TypeTuple};
+
+#[derive(Debug)]
+pub enum Hal {
+	Rp2040hal,
+}
+
+impl FromStr for Hal {
+	type Err = syn::Error;
+
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		match s {
+			"rp2040hal" => Ok(Self::Rp2040hal),
+			_ => Err(syn::Error::new(
+				proc_macro2::Span::call_site(),
+				format!("Unknown hal: {s}."),
+			)),
+		}
+	}
+}
 
 #[derive(Debug, Default)]
-pub struct EnvAttributes {
+pub struct EnvValues {
 	pub rows: Option<String>,
 	pub cols: Option<String>,
 	pub layout: Option<String>,
 }
 
-#[derive(Debug, Default)]
-pub struct ParsedAttributes {
-	pub delay: Option<u32>,
-	pub env: EnvAttributes,
+impl syn::parse::Parse for EnvValues {
+	fn parse(input: syn::parse::ParseStream) -> Result<Self, syn::Error> {
+		let content;
+		parenthesized!(content in input);
+
+		let mut rows: Option<String> = None;
+		let mut cols: Option<String> = None;
+		let mut layout: Option<String> = None;
+
+		while !content.is_empty() {
+			let ident: Ident = content.parse()?;
+
+			content.parse::<Token![=]>()?;
+
+			let val: LitStr = content.parse()?;
+
+			match ident.to_string().as_str() {
+				"rows" => {
+					if rows.is_some() {
+						return Err(syn::Error::new_spanned(ident, "Duplicate rows value."));
+					}
+
+					rows = Some(val.value());
+				}
+				"cols" => {
+					if cols.is_some() {
+						return Err(syn::Error::new_spanned(ident, "Duplicate cols value."));
+					}
+
+					cols = Some(val.value());
+				}
+				"layout" => {
+					if layout.is_some() {
+						return Err(syn::Error::new_spanned(ident, "Duplicate layout value."));
+					}
+
+					layout = Some(val.value());
+				}
+				_ => {
+					return Err(syn::Error::new_spanned(ident, "Unexpected env field."));
+				}
+			}
+
+			if content.peek(Token![,]) {
+				content.parse::<Token![,]>()?;
+			} else {
+				break;
+			}
+		}
+
+		Ok(Self { rows, cols, layout })
+	}
+}
+
+#[derive(Debug)]
+pub struct Attributes {
+	pub hal: Hal,
+	pub delay: u32,
+	pub env: EnvValues,
+}
+
+impl syn::parse::Parse for Attributes {
+	fn parse(input: syn::parse::ParseStream) -> Result<Self, syn::Error> {
+		let input_span = input.span();
+
+		let mut hal: Option<Hal> = None;
+		let mut delay: Option<u32> = None;
+		let mut env = EnvValues::default();
+
+		let mut env_already_provided = false;
+
+		while !input.is_empty() {
+			let ident: Ident = input.parse()?;
+
+			match ident.to_string().as_str() {
+				"hal" => {
+					if hal.is_some() {
+						return Err(syn::Error::new_spanned(ident, "Duplicate hal value."));
+					}
+
+					input.parse::<Token![=]>()?;
+
+					let val: LitStr = input.parse()?;
+
+					hal = Some(Hal::from_str(&val.value())?);
+				}
+				"delay" => {
+					if delay.is_some() {
+						return Err(syn::Error::new_spanned(ident, "Duplicate delay value."));
+					}
+
+					input.parse::<Token![=]>()?;
+
+					let val: LitInt = input.parse()?;
+
+					delay = Some(val.base10_parse()?);
+				}
+				"env" => {
+					if env_already_provided {
+						return Err(syn::Error::new_spanned(ident, "Duplicate env value."));
+					}
+
+					env = input.parse()?;
+
+					env_already_provided = true;
+				}
+				_ => {
+					return Err(syn::Error::new_spanned(ident, "Unexpected argument."));
+				}
+			}
+
+			if input.peek(Token![,]) {
+				input.parse::<Token![,]>()?;
+			} else {
+				break;
+			}
+		}
+
+		let hal = hal.ok_or(syn::Error::new(input_span, "Missing hal value."))?;
+		let delay = delay.unwrap_or(35);
+
+		Ok(Self { hal, delay, env })
+	}
 }
 
 #[derive(Debug, Default)]
@@ -20,125 +161,60 @@ pub struct ParsedFields {
 	pub layout: Option<TypeTuple>,
 }
 
-pub fn parse_attributes(attrs: Vec<syn::Attribute>) -> Result<ParsedAttributes, syn::Error> {
-	let mut parsed_attrs = ParsedAttributes::default();
+impl syn::parse::Parse for ParsedFields {
+	fn parse(input: syn::parse::ParseStream) -> Result<Self, syn::Error> {
+		let mut rows: Option<TypeTuple> = None;
+		let mut cols: Option<TypeTuple> = None;
+		let mut layout: Option<TypeTuple> = None;
 
-	for attr in attrs {
-		if attr.path().is_ident("kb_pin_matrix") {
-			attr.parse_nested_meta(|meta| {
-				let ident = meta.path.get_ident().map(std::string::ToString::to_string);
+		while !input.is_empty() {
+			let ident: Ident = input.parse()?;
 
-				match ident.as_deref() {
-					Some("delay") => {
-						let lit: LitInt = meta.value()?.parse()?;
+			input.parse::<Token![:]>()?;
 
-						let delay_value = lit.base10_parse::<u32>()?;
+			let val: TypeTuple = input.parse()?;
 
-						if let Some(prev_delay) = parsed_attrs.delay.replace(delay_value) {
-							panic!("'delay' value {prev_delay} already provided.");
-						}
+			match ident.to_string().as_str() {
+				"rows" => {
+					if rows.is_some() {
+						return Err(syn::Error::new_spanned(ident, "Duplicate rows field."));
 					}
-					Some("env") => {
-						meta.parse_nested_meta(|meta| {
-							let ident = meta.path.get_ident().map(std::string::ToString::to_string);
 
-							let lit: LitStr = meta.value()?.parse()?;
-
-							let (env_name, replace_res) = match ident.as_deref() {
-								Some("rows") => {
-									let replace_res = parsed_attrs.env.rows.replace(lit.value());
-
-									("rows", replace_res)
-								}
-								Some("cols") => {
-									let replace_res = parsed_attrs.env.cols.replace(lit.value());
-
-									("cols", replace_res)
-								}
-								Some("layout") => {
-									let replace_res = parsed_attrs.env.layout.replace(lit.value());
-
-									("layout", replace_res)
-								}
-								Some(other) => {
-									panic!("Unsupported value {other} provided.");
-								}
-								None => {
-									todo!();
-								}
-							};
-
-							if let Some(prev_env) = replace_res {
-								panic!("env '{env_name}' value {prev_env} already provided.");
-							}
-
-							Ok(())
-						})?;
-					}
-					Some(other) => {
-						panic!("Unsupported key '{other}' in kb_pin_matrix.");
-					}
-					None => {
-						panic!("Expected identifier in kb_pin_matrix.");
-					}
+					rows = Some(val);
 				}
+				"cols" => {
+					if cols.is_some() {
+						return Err(syn::Error::new_spanned(ident, "Duplicate cols field."));
+					}
 
-				Ok(())
-			})?;
+					cols = Some(val);
+				}
+				"layout" => {
+					if layout.is_some() {
+						return Err(syn::Error::new_spanned(ident, "Duplicate layout field."));
+					}
+
+					layout = Some(val);
+				}
+				_ => {
+					return Err(syn::Error::new_spanned(ident, "Unexpected field."));
+				}
+			}
+
+			if input.peek(Token![,]) {
+				input.parse::<Token![,]>()?;
+			} else {
+				break;
+			}
 		}
-	}
 
-	Ok(parsed_attrs)
+		Ok(Self { rows, cols, layout })
+	}
 }
 
-pub fn parse_fields(fields: syn::Fields) -> Result<ParsedFields, &'static str> {
-	let mut parsed_fields = ParsedFields::default();
+pub fn parse_env_val_to_expr_arr(key: &str) -> Result<ExprArray, syn::Error> {
+	let layout_str = std::env::var(key)
+		.map_err(|_| syn::Error::new(proc_macro2::Span::call_site(), format!("Missing env value {key}")))?;
 
-	for field in fields {
-		let ident = field.ident.map(|i| i.to_string());
-
-		let Type::Tuple(lit_type) = field.ty else {
-			panic!("Expected tuple value.");
-		};
-
-		let replaced_field_opt = match ident.as_deref() {
-			Some("rows") => {
-				let replace_res = parsed_fields.rows.replace(lit_type);
-
-				replace_res.map(|_| "rows")
-			}
-			Some("cols") => {
-				let replace_res = parsed_fields.cols.replace(lit_type);
-
-				replace_res.map(|_| "cols")
-			}
-			Some("layout") => {
-				let replace_res = parsed_fields.layout.replace(lit_type);
-
-				replace_res.map(|_| "layout")
-			}
-			Some(other) => {
-				panic!("Unsupported field '{other}' in kb_pin_matrix.");
-			}
-			None => {
-				todo!();
-			}
-		};
-
-		if let Some(field_name) = replaced_field_opt {
-			panic!("Duplicate {field_name} field.");
-		}
-	}
-
-	Ok(parsed_fields)
-}
-
-pub fn parse_env_val_to_expr_arr(key: &str) -> Result<ExprArray, &str> {
-	let Ok(layout_str) = std::env::var(key) else {
-		panic!("Missing env value {key}");
-	};
-
-	let layout: ExprArray = syn::parse_str(&layout_str).expect("Failed to parse str into an array expr");
-
-	Ok(layout)
+	syn::parse_str(&layout_str)
 }

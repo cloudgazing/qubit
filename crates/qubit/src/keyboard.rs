@@ -2,6 +2,8 @@
 
 use rp2040_hal as hal;
 
+use qubit_macros::kb_pin_matrix;
+
 // Column
 type C0 = hal::gpio::bank0::Gpio0;
 type C1 = hal::gpio::bank0::Gpio1;
@@ -24,8 +26,7 @@ type R2 = hal::gpio::bank0::Gpio18;
 type R3 = hal::gpio::bank0::Gpio19;
 type R4 = hal::gpio::bank0::Gpio20;
 
-#[qubit_macros::kb_pin_matrix]
-#[kb_pin_matrix(env(layout = "CONFIG_LAYOUT_KEYMAP"))]
+#[kb_pin_matrix(hal = "rp2040hal", env(layout = "CONFIG_LAYOUT_KEYMAP"))]
 pub struct KeyboardMatrix {
 	rows: (R0, R1, R2, R3, R4),
 	cols: (C0, C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13),

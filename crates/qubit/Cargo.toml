@@ -29,5 +29,6 @@ keyboards.workspace = true
 keyboards = { workspace = true, features = ["std"] }
 
 [features]
-default = ["serial"]
+default = ["serial", "silverplate"]
 serial = ["usbd-serial"]
+silverplate = []

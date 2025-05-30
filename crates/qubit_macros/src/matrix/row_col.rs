@@ -2,6 +2,14 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{Expr, ExprArray, Ident};
 
+pub fn row_field_name(index: usize) -> Ident {
+	format_ident!("row_{index}")
+}
+
+pub fn col_field_name(index: usize) -> Ident {
+	format_ident!("col_{index}")
+}
+
 pub fn validate_layout(row_len: usize, col_len: usize, layout: &ExprArray) {
 	assert_eq!(
 		layout.elems.len(),
@@ -22,14 +30,6 @@ pub fn validate_layout(row_len: usize, col_len: usize, layout: &ExprArray) {
 	}
 }
 
-pub fn row_field_name(index: usize) -> Ident {
-	format_ident!("row_{index}")
-}
-
-pub fn col_field_name(index: usize) -> Ident {
-	format_ident!("col_{index}")
-}
-
 pub fn map_row_fields(rows: &ExprArray) -> TokenStream {
 	let map = rows.elems.iter().enumerate().map(|(i, e)| {
 		let field_name = row_field_name(i);
@@ -40,7 +40,7 @@ pub fn map_row_fields(rows: &ExprArray) -> TokenStream {
 			#[doc = #doc_string]
 			#[doc = ""]
 			#[doc = "This acts as a pulled up *output*."]
-			#field_name: Pin<#e, FunctionSio<SioOutput>, PullDown>
+			#field_name: Pin<#e, FunctionSioOutput, PullDown>
 		}
 	});
 
@@ -77,7 +77,7 @@ pub fn map_col_fields(cols: &ExprArray) -> TokenStream {
 			#[doc = #doc_string]
 			#[doc = ""]
 			#[doc = "This acts as a pulled up *input*."]
-		  #field_name: Pin<#e, FunctionSio<SioInput>, PullUp>
+		  #field_name: Pin<#e, FunctionSioInput, PullUp>
 		}
 	});
 

@@ -11,8 +11,6 @@ use panic_probe as _;
 // of other BSPs through feature flags.
 use rp2040_hal as hal;
 
-#[cfg(feature = "serial")]
-use embedded_hal::delay::DelayNs;
 use embedded_hal::digital::OutputPin;
 use hal::pac::interrupt;
 use keyboard::KeyboardMatrix;
@@ -21,12 +19,12 @@ use usb_device::bus::UsbBusAllocator;
 use qubit_macros::define_configuration;
 use usbd_hid::descriptor::KeyboardReport;
 
+mod connection;
 mod keyboard;
 mod keymap;
 mod parse;
 mod report;
 mod time;
-mod usb;
 
 /// External high-speed crystal on the Raspberry Pi Pico board is 12 MHz.
 const XOSC_CRYSTAL_FREQ: u32 = 12_000_000;
@@ -80,9 +78,6 @@ fn main() -> ! {
 	)
 	.unwrap();
 
-	#[cfg(feature = "serial")]
-	let mut timer = hal::timer::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
-	#[cfg(not(feature = "serial"))]
 	let timer = hal::timer::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
 
 	let sio = hal::Sio::new(pac.SIO);
@@ -137,19 +132,10 @@ fn main() -> ! {
 	));
 
 	// Safety: We initialize the USB device before enabling the interrupts
-	let usb_dev = unsafe { usb::UsbDeviceInstance::new(usb_alloc) };
+	let usb_dev = unsafe { connection::UsbDeviceInstance::new(usb_alloc) };
 
 	unsafe {
-		// let mut core_peripherals = hal::pac::CorePeripherals::take().unwrap();
-		// core_peripherals.NVIC.set_priority(hal::pac::interrupt::USBCTRL_IRQ, 1);
 		hal::pac::NVIC::unmask(hal::pac::Interrupt::USBCTRL_IRQ);
-	}
-
-	#[cfg(feature = "serial")]
-	{
-		// Set a delay to wait for serial to get connected.
-		timer.delay_ms(1500);
-		usb_dev.send_serial_message("Listening:\n".as_bytes());
 	}
 
 	// Counter used for the interval at which to check for pressed keys.
@@ -170,9 +156,6 @@ fn main() -> ! {
 			if report != prev_keyboard_report {
 				usb_dev.send_keyboard_report(&report);
 
-				#[cfg(feature = "serial")]
-				usb_dev.send_serial_message(b"SENT REPORT\n");
-
 				prev_keyboard_report = report;
 			}
 		}
@@ -184,7 +167,7 @@ fn main() -> ! {
 fn USBCTRL_IRQ() {
 	// Safety: The function is called inside an interrupt context and after initialization.
 	unsafe {
-		usb::poll_usb_device();
+		connection::poll_usb_device();
 	}
 }
 
