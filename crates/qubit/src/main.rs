@@ -17,7 +17,6 @@ use keyboard::KeyboardMatrix;
 use usb_device::bus::UsbBusAllocator;
 
 use qubit_macros::define_configuration;
-use usbd_hid::descriptor::KeyboardReport;
 
 mod connection;
 mod keyboard;
@@ -32,7 +31,6 @@ const XOSC_CRYSTAL_FREQ: u32 = 12_000_000;
 const KM_SIZE: usize = parse::str_to_usize(env!("CONFIG_KEYMAP_SIZE"));
 
 type Keymap = keyboards::config::Keymap<KM_SIZE>;
-
 type Configuration = keyboards::config::Configuration<KM_SIZE>;
 
 #[used]
@@ -50,18 +48,10 @@ pub static CONFIGURATION: Configuration = define_configuration!(
 	CONFIG_KEYMAP
 );
 
-const _: () = {
-	// Check that the configuration we use fits in the link section.
-	const CONFIG_SECTION_SIZE: usize = 0x19000;
-
-	assert!(core::mem::size_of::<Configuration>() <= CONFIG_SECTION_SIZE);
-};
+// Check that the configuration we use fits in the link section. (config section size = 0x19000)
+const _: () = assert!(core::mem::size_of::<Configuration>() <= 0x19000);
 
 #[hal::entry]
-fn main_entry() -> ! {
-	main()
-}
-
 fn main() -> ! {
 	// Get the main components which are used for the initialization, like peripherals,
 	// clocks, registers, pins.
@@ -144,19 +134,19 @@ fn main() -> ! {
 
 	led_pin.set_low().unwrap();
 
-	let mut prev_keyboard_report = KeyboardReport::default();
+	let mut prev_report: report::RawKeyboardReport = Default::default();
 
 	loop {
 		if count_down.wait().is_ok() {
 			let pressed_keys = kb_matrix.get_pressed_keys();
 
 			// SAFETY: The active keymap was initialized before this call.
-			let report = unsafe { report::construct_keyboard_report(pressed_keys) };
+			let report = unsafe { report::construct_6kro_report(pressed_keys) };
 
-			if report != prev_keyboard_report {
+			if report != prev_report {
 				usb_dev.send_keyboard_report(&report);
 
-				prev_keyboard_report = report;
+				prev_report = report;
 			}
 		}
 	}
@@ -169,10 +159,4 @@ fn USBCTRL_IRQ() {
 	unsafe {
 		connection::poll_usb_device();
 	}
-}
-
-#[cfg(miri)]
-#[unsafe(no_mangle)]
-fn miri_start(_argc: isize, _argv: *const *const u8) -> isize {
-	main();
 }

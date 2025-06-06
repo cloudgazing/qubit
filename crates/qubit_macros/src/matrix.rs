@@ -140,7 +140,7 @@ pub fn kb_pin_matrix_macro(args: TokenStream, item: TokenStream) -> TokenStream 
 		layout.expect("Missing layout definition.")
 	};
 
-	row_col::validate_layout(rows.elems.len(), cols.elems.len(), &layout);
+	row_col::validate_layout(rows.elems.len(), cols.elems.len(), &layout).unwrap();
 
 	let visibility = input.vis;
 	let struct_name = input.ident;
@@ -153,7 +153,7 @@ pub fn kb_pin_matrix_macro(args: TokenStream, item: TokenStream) -> TokenStream 
 	// Generate struct implemenation.
 	let struct_impl = {
 		let new_method = define_new_method(&visibility, &rows, &cols);
-		let generate_key_report_method = define_get_pressed_keys_method(&visibility, &layout, delay_value);
+		let generate_key_report_method = define_get_pressed_keys_method(&visibility, &layout, delay_value).unwrap();
 
 		quote! {
 			impl #struct_name {
@@ -221,9 +221,13 @@ fn define_new_method(visibility: &Visibility, rows: &ExprArray, cols: &ExprArray
 /// To check which keys are pressed, we drive the row pin to low, check each column pin
 /// if it's low, then drive the row pin back up. This is repeated for every row and for
 /// efficiency the key positions marked as empty in the layout (0x00) are skipped.
-fn define_get_pressed_keys_method(visibility: &Visibility, layout: &ExprArray, delay: u32) -> proc_macro2::TokenStream {
+fn define_get_pressed_keys_method(
+	visibility: &Visibility,
+	layout: &ExprArray,
+	delay: u32,
+) -> Result<proc_macro2::TokenStream, syn::Error> {
 	// Get the total amount of keys and from that find out how many keymaps we need to use.
-	let keys_count = keymap::get_keymap_size(layout);
+	let keys_count = keymap::get_keymap_size(layout)?;
 
 	let mut bit_pos = 0_usize;
 
@@ -273,7 +277,7 @@ fn define_get_pressed_keys_method(visibility: &Visibility, layout: &ExprArray, d
 		}
 	});
 
-	quote! {
+	let tokens = quote! {
 		#[doc = r"Checks every pin looking for pressed keys and returns a `KeyboardReport`."]
 		#visibility fn get_pressed_keys(&mut self) -> [usize; #keys_count.div_ceil(usize::BITS as usize)] {
 			const SIZE: usize = usize::BITS as usize;
@@ -284,5 +288,7 @@ fn define_get_pressed_keys_method(visibility: &Visibility, layout: &ExprArray, d
 
 			bitmaps
 		}
-	}
+	};
+
+	Ok(tokens)
 }

@@ -3,20 +3,20 @@ use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 
-fn export_model_configuration(model_name: &str) {
-	let full_config = keyboards::config::parse::parse_model_config(model_name).unwrap();
+fn export_model_configuration(board_author: &str, board_name: &str) {
+	let toml_config = keyboards::config::parse::parse_model_config(board_author, board_name).unwrap();
 
-	let config_name = full_config.name;
-	let config_author = full_config.author;
-	let config_id = full_config.id;
-	let config_version = full_config.version;
+	let config_name = toml_config.name;
+	let config_author = toml_config.author;
+	let config_id = toml_config.id;
+	let config_version = toml_config.version;
 
-	let config_layout_keymap = format!("{:?}", full_config.layout_keymap);
-	let config_layout_keymap_row_len = full_config.row_len;
-	let config_layout_keymap_col_len = full_config.col_len;
+	let config_layout_keymap = format!("{:?}", toml_config.layout_keymap);
+	let config_layout_keymap_row_len = toml_config.row_len;
+	let config_layout_keymap_col_len = toml_config.col_len;
 
-	let config_keymap = format!("{:?}", full_config.keymap);
-	let config_keymap_size = full_config.keymap_size;
+	let config_keymap = format!("{:?}", toml_config.keymap);
+	let config_keymap_size = toml_config.keymap_size;
 
 	println!("cargo:rustc-env=CONFIG_NAME={config_name}");
 	println!("cargo:rustc-env=CONFIG_AUTHOR={config_author}");
@@ -34,16 +34,17 @@ fn export_model_configuration(model_name: &str) {
 fn main() {
 	// TODO: Find a way to maybe pass the model name when compiling.
 	// For now this uses the model I'm currently working on.
-	let model_name = "moonquartz";
+	let board_author = "cloudgazing";
+	let board_name = "moonquartz";
 
-	export_model_configuration(model_name);
+	export_model_configuration(board_author, board_name);
 
-	let memory_x_path = keyboards::linker::memory_x_path(model_name);
+	let memory_x_path = keyboards::linker::linker_file_path(board_author, board_name);
 
 	// Put `memory.x` in our output directory and ensure it's on the linker search path.
 	let out = PathBuf::from(env::var_os("OUT_DIR").unwrap());
 
-	let memory_x = keyboards::linker::memory_x_contents("moonquartz").unwrap();
+	let memory_x = keyboards::linker::linker_contents(board_author, board_name).unwrap();
 
 	let mut f = File::create(out.join("memory.x")).unwrap();
 	f.write_all(&memory_x).unwrap();

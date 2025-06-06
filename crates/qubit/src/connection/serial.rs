@@ -5,8 +5,9 @@ use rp2040_hal as hal;
 use hal::usb::UsbBus;
 use usb_device::bus::UsbBusAllocator;
 use usbd_hid::UsbError;
-use usbd_hid::descriptor::KeyboardReport;
 use usbd_serial::SerialPort;
+
+use crate::report::RawKeyboardReport;
 
 static mut SERIAL_PORT: MaybeUninit<SerialPort<'static, UsbBus>> = MaybeUninit::uninit();
 
@@ -41,12 +42,12 @@ pub fn write_serial_message<'a, T: Into<&'a [u8]>>(port: &mut SerialPort<UsbBus>
 	port.write(data.into())
 }
 
-pub fn write_report_message(port: &mut SerialPort<UsbBus>, report: &KeyboardReport) {
+pub fn write_report_message(port: &mut SerialPort<UsbBus>, report: &RawKeyboardReport) {
 	_ = write_serial_message(port, b"-- KEY REPORT --\n".as_ref());
 
 	_ = write_serial_message(port, b"[".as_ref());
-	for code in report.keycodes {
-		if code != 0 {
+	for code in &report[3..] {
+		if *code != 0 {
 			_ = write_serial_message(port, b"KEY, ".as_ref());
 		}
 	}

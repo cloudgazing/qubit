@@ -1,8 +1,4 @@
-#![no_std]
-
-#[cfg(feature = "std")]
-#[macro_use]
-extern crate std;
+#![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod config;
 pub mod keycodes;

@@ -10,24 +10,28 @@ pub fn col_field_name(index: usize) -> Ident {
 	format_ident!("col_{index}")
 }
 
-pub fn validate_layout(row_len: usize, col_len: usize, layout: &ExprArray) {
-	assert_eq!(
-		layout.elems.len(),
-		row_len,
-		"Layout row length doesn't match pin row length."
-	);
+pub fn validate_layout(row_len: usize, col_len: usize, layout: &ExprArray) -> Result<(), syn::Error> {
+	if layout.elems.len() != row_len {
+		return Err(syn::Error::new_spanned(
+			layout,
+			"Layout row length doesn't match pin row length.",
+		));
+	}
 
 	for elem in &layout.elems {
 		let Expr::Array(array_elem) = elem else {
-			panic!("Expected arr expr.");
+			return Err(syn::Error::new_spanned(elem, "Expected arr expr."));
 		};
 
-		assert_eq!(
-			array_elem.elems.len(),
-			col_len,
-			"Layout column length doesn't match pin column length."
-		);
+		if array_elem.elems.len() != col_len {
+			return Err(syn::Error::new_spanned(
+				array_elem,
+				"Layout column length doesn't match pin column length.",
+			));
+		}
 	}
+
+	Ok(())
 }
 
 pub fn map_row_fields(rows: &ExprArray) -> TokenStream {

@@ -6,10 +6,11 @@ use rp2040_hal as hal;
 use hal::usb::UsbBus;
 use usb_device::bus::UsbBusAllocator;
 use usb_device::device::{StringDescriptors, UsbDevice, UsbDeviceBuilder, UsbVidPid};
-use usbd_hid::descriptor::KeyboardReport;
 use usbd_hid::hid_class::ReportType;
 
-mod hid;
+use crate::report::RawKeyboardReport;
+
+pub mod hid;
 #[cfg(feature = "serial")]
 pub mod serial;
 #[cfg(feature = "silverplate")]
@@ -22,6 +23,7 @@ const USB_PID: u16 = 0x27DD;
 static mut USB_ALLOC: MaybeUninit<UsbBusAllocator<UsbBus>> = MaybeUninit::uninit();
 static mut USB_DEVICE: MaybeUninit<UsbDevice<UsbBus>> = MaybeUninit::uninit();
 
+#[derive(Debug)]
 pub struct UsbDeviceInstance<'a> {
 	_marker: PhantomData<&'a mut ()>,
 }
@@ -50,7 +52,7 @@ impl UsbDeviceInstance<'_> {
 		let vid_pid = UsbVidPid(USB_VID, USB_PID);
 		let descriptors = StringDescriptors::default()
 			.manufacturer("cloudgazing")
-			.product("KB-RS-CLD")
+			.product("MoonQuartz")
 			.serial_number("CLD-KB");
 
 		let usb_device = {
@@ -79,13 +81,13 @@ impl UsbDeviceInstance<'_> {
 	/// The report is written inside interrupt-free context.
 	// Allow this because I want the caller to get a device instance to send reports.
 	#[allow(clippy::unused_self)]
-	pub fn send_keyboard_report(&self, report: &KeyboardReport) {
+	pub fn send_keyboard_report(&self, report: &RawKeyboardReport) {
 		cortex_m::interrupt::free(|_| {
 			// Safety: We execute this inside the critical section which prevents two mutable references
 			// to the value from being created.
 			let hid_class = unsafe { hid::get_class_ref() };
 
-			_ = hid_class.push_input(report);
+			_ = hid_class.push_raw_input(report.as_ref());
 
 			#[cfg(feature = "serial")]
 			{
@@ -129,21 +131,41 @@ pub unsafe fn poll_usb_device() {
 		serial_port,
 	]);
 
-	#[cfg(feature = "silverplate")]
 	if has_new_data {
 		let mut buf = [0_u8; 64];
 
-		if let Ok(report_info) = hid_class.pull_raw_report(&mut buf) {
-			#[cfg(feature = "serial")]
-			{
-				let message = match report_info.report_type {
-					ReportType::Feature => "got some feature report data!!\n",
-					ReportType::Input => "got some input report data!!\n",
-					ReportType::Output => "got some output report data!!\n",
-					ReportType::Reserved => "got some reserved report data!!\n",
-				};
+		let Ok(rep_info) = hid_class.pull_raw_report(&mut buf) else {
+			return;
+		};
 
-				_ = serial::write_serial_message(serial_port, message.as_bytes());
+		if rep_info.report_type == ReportType::Output {
+			#[cfg(not(feature = "silverplate"))]
+			{
+				// Handle LED here.
+
+				#[cfg(feature = "serial")]
+				let _ = serial::write_serial_message(serial_port, b"got some other output report data!!\n".as_ref());
+			}
+
+			#[cfg(feature = "silverplate")]
+			match buf[0] {
+				hid::KEYPRESS_REPORT_OUT_ID => {
+					// Handle LED here.
+
+					#[cfg(feature = "serial")]
+					let _ = serial::write_serial_message(serial_port, b"got some output report data!!\n".as_ref());
+				}
+				silverplate::VENDOR_REPORT_OUT_ID => {
+					let vendor_byte = buf[1];
+
+					silverplate::process_vendor_report(
+						hid_class,
+						vendor_byte,
+						#[cfg(feature = "serial")]
+						serial_port,
+					);
+				}
+				_ => {}
 			}
 		}
 	}

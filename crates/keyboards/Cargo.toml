@@ -1,6 +1,6 @@
 [package]
 name = "keyboards"
-version = "0.1.0"
+version = "0.0.15"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -14,6 +14,8 @@ toml = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 # External crates
 anyhow = { version = "1.0.98", optional = true }
+semver = { version =  "1.0.26", optional = true }
 
 [features]
-std = ["anyhow", "serde", "toml"]
+default = []
+std = ["anyhow", "semver", "serde", "toml"]

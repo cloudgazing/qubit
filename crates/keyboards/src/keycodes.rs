@@ -8,14 +8,14 @@ use core::num::NonZeroU8;
 //
 // Used for the first byte in the HID report.
 
-pub const KEY_MOD_LCTRL: NonZeroU8 = NonZeroU8::new(0x01).unwrap();
-pub const KEY_MOD_LSHIFT: NonZeroU8 = NonZeroU8::new(0x02).unwrap();
-pub const KEY_MOD_LALT: NonZeroU8 = NonZeroU8::new(0x04).unwrap();
-pub const KEY_MOD_LMETA: NonZeroU8 = NonZeroU8::new(0x08).unwrap();
-pub const KEY_MOD_RCTRL: NonZeroU8 = NonZeroU8::new(0x10).unwrap();
-pub const KEY_MOD_RSHIFT: NonZeroU8 = NonZeroU8::new(0x20).unwrap();
-pub const KEY_MOD_RALT: NonZeroU8 = NonZeroU8::new(0x40).unwrap();
-pub const KEY_MOD_RMETA: NonZeroU8 = NonZeroU8::new(0x80).unwrap();
+pub const KM_LCTRL: NonZeroU8 = NonZeroU8::new(0x01).unwrap();
+pub const KM_LSHIFT: NonZeroU8 = NonZeroU8::new(0x02).unwrap();
+pub const KM_LALT: NonZeroU8 = NonZeroU8::new(0x04).unwrap();
+pub const KM_LMETA: NonZeroU8 = NonZeroU8::new(0x08).unwrap();
+pub const KM_RCTRL: NonZeroU8 = NonZeroU8::new(0x10).unwrap();
+pub const KM_RSHIFT: NonZeroU8 = NonZeroU8::new(0x20).unwrap();
+pub const KM_RALT: NonZeroU8 = NonZeroU8::new(0x40).unwrap();
+pub const KM_RMETA: NonZeroU8 = NonZeroU8::new(0x80).unwrap();
 
 /// The Second byte in the report, which is reserved.
 pub const RESERVED: u8 = 0x00;
@@ -26,311 +26,312 @@ pub const RESERVED: u8 = 0x00;
 // 0x00 if no key pressed.
 //
 // If more than N keys are pressed, the HID reports
-// KEY_ERR_OVF in all slots to indicate this condition.
+// KC_ERR_OVF in all slots to indicate this condition.
 
 /// No key pressed
-pub const KEY_NONE: u8 = 0x00;
+pub const KC_NONE: u8 = 0x00;
 /// Keyboard Error Roll Over
 ///
 /// Used for all slots if too many keys are pressed ("Phantom key")
-pub const KEY_ERR_OVF: NonZeroU8 = NonZeroU8::new(0x01).unwrap();
+pub const KC_ERR_OVF: NonZeroU8 = NonZeroU8::new(0x01).unwrap();
 
 // 0x02 //  Keyboard POST Fail
 // 0x03 //  Keyboard Error Undefined
 
 /// Keyboard a and A
-pub const KEY_A: NonZeroU8 = NonZeroU8::new(0x04).unwrap();
+pub const KC_A: NonZeroU8 = NonZeroU8::new(0x04).unwrap();
 /// Keyboard b and B
-pub const KEY_B: NonZeroU8 = NonZeroU8::new(0x05).unwrap();
+pub const KC_B: NonZeroU8 = NonZeroU8::new(0x05).unwrap();
 /// Keyboard c and C
-pub const KEY_C: NonZeroU8 = NonZeroU8::new(0x06).unwrap();
+pub const KC_C: NonZeroU8 = NonZeroU8::new(0x06).unwrap();
 /// Keyboard d and D
-pub const KEY_D: NonZeroU8 = NonZeroU8::new(0x07).unwrap();
+pub const KC_D: NonZeroU8 = NonZeroU8::new(0x07).unwrap();
 /// Keyboard e and E
-pub const KEY_E: NonZeroU8 = NonZeroU8::new(0x08).unwrap();
+pub const KC_E: NonZeroU8 = NonZeroU8::new(0x08).unwrap();
 /// Keyboard f and F
-pub const KEY_F: NonZeroU8 = NonZeroU8::new(0x09).unwrap();
+pub const KC_F: NonZeroU8 = NonZeroU8::new(0x09).unwrap();
 /// Keyboard g and G
-pub const KEY_G: NonZeroU8 = NonZeroU8::new(0x0a).unwrap();
+pub const KC_G: NonZeroU8 = NonZeroU8::new(0x0A).unwrap();
 /// Keyboard h and H
-pub const KEY_H: NonZeroU8 = NonZeroU8::new(0x0b).unwrap();
+pub const KC_H: NonZeroU8 = NonZeroU8::new(0x0B).unwrap();
 /// Keyboard i and I
-pub const KEY_I: NonZeroU8 = NonZeroU8::new(0x0c).unwrap();
+pub const KC_I: NonZeroU8 = NonZeroU8::new(0x0C).unwrap();
 /// Keyboard j and J
-pub const KEY_J: NonZeroU8 = NonZeroU8::new(0x0d).unwrap();
+pub const KC_J: NonZeroU8 = NonZeroU8::new(0x0D).unwrap();
 /// Keyboard k and K
-pub const KEY_K: NonZeroU8 = NonZeroU8::new(0x0e).unwrap();
+pub const KC_K: NonZeroU8 = NonZeroU8::new(0x0E).unwrap();
 /// Keyboard l and L
-pub const KEY_L: NonZeroU8 = NonZeroU8::new(0x0f).unwrap();
+pub const KC_L: NonZeroU8 = NonZeroU8::new(0x0F).unwrap();
 /// Keyboard m and M
-pub const KEY_M: NonZeroU8 = NonZeroU8::new(0x10).unwrap();
+pub const KC_M: NonZeroU8 = NonZeroU8::new(0x10).unwrap();
 /// Keyboard n and N
-pub const KEY_N: NonZeroU8 = NonZeroU8::new(0x11).unwrap();
+pub const KC_N: NonZeroU8 = NonZeroU8::new(0x11).unwrap();
 /// Keyboard o and O
-pub const KEY_O: NonZeroU8 = NonZeroU8::new(0x12).unwrap();
+pub const KC_O: NonZeroU8 = NonZeroU8::new(0x12).unwrap();
 /// Keyboard p and P
-pub const KEY_P: NonZeroU8 = NonZeroU8::new(0x13).unwrap();
+pub const KC_P: NonZeroU8 = NonZeroU8::new(0x13).unwrap();
 /// Keyboard q and Q
-pub const KEY_Q: NonZeroU8 = NonZeroU8::new(0x14).unwrap();
+pub const KC_Q: NonZeroU8 = NonZeroU8::new(0x14).unwrap();
 /// Keyboard r and R
-pub const KEY_R: NonZeroU8 = NonZeroU8::new(0x15).unwrap();
+pub const KC_R: NonZeroU8 = NonZeroU8::new(0x15).unwrap();
 /// Keyboard s and S
-pub const KEY_S: NonZeroU8 = NonZeroU8::new(0x16).unwrap();
+pub const KC_S: NonZeroU8 = NonZeroU8::new(0x16).unwrap();
 /// Keyboard t and T
-pub const KEY_T: NonZeroU8 = NonZeroU8::new(0x17).unwrap();
+pub const KC_T: NonZeroU8 = NonZeroU8::new(0x17).unwrap();
 /// Keyboard u and U
-pub const KEY_U: NonZeroU8 = NonZeroU8::new(0x18).unwrap();
+pub const KC_U: NonZeroU8 = NonZeroU8::new(0x18).unwrap();
 /// Keyboard v and V
-pub const KEY_V: NonZeroU8 = NonZeroU8::new(0x19).unwrap();
+pub const KC_V: NonZeroU8 = NonZeroU8::new(0x19).unwrap();
 /// Keyboard w and W
-pub const KEY_W: NonZeroU8 = NonZeroU8::new(0x1a).unwrap();
+pub const KC_W: NonZeroU8 = NonZeroU8::new(0x1A).unwrap();
 /// Keyboard x and X
-pub const KEY_X: NonZeroU8 = NonZeroU8::new(0x1b).unwrap();
+pub const KC_X: NonZeroU8 = NonZeroU8::new(0x1B).unwrap();
 /// Keyboard y and Y
-pub const KEY_Y: NonZeroU8 = NonZeroU8::new(0x1c).unwrap();
+pub const KC_Y: NonZeroU8 = NonZeroU8::new(0x1C).unwrap();
 /// Keyboard z and Z
-pub const KEY_Z: NonZeroU8 = NonZeroU8::new(0x1d).unwrap();
+pub const KC_Z: NonZeroU8 = NonZeroU8::new(0x1D).unwrap();
 
 /// Keyboard 1 and !
-pub const KEY_1: NonZeroU8 = NonZeroU8::new(0x1e).unwrap();
+pub const KC_1: NonZeroU8 = NonZeroU8::new(0x1E).unwrap();
 /// Keyboard 2 and @
-pub const KEY_2: NonZeroU8 = NonZeroU8::new(0x1f).unwrap();
+pub const KC_2: NonZeroU8 = NonZeroU8::new(0x1F).unwrap();
 /// Keyboard 3 and #
-pub const KEY_3: NonZeroU8 = NonZeroU8::new(0x20).unwrap();
+pub const KC_3: NonZeroU8 = NonZeroU8::new(0x20).unwrap();
 /// Keyboard 4 and $
-pub const KEY_4: NonZeroU8 = NonZeroU8::new(0x21).unwrap();
+pub const KC_4: NonZeroU8 = NonZeroU8::new(0x21).unwrap();
 /// Keyboard 5 and %
-pub const KEY_5: NonZeroU8 = NonZeroU8::new(0x22).unwrap();
+pub const KC_5: NonZeroU8 = NonZeroU8::new(0x22).unwrap();
 /// Keyboard 6 and ^
-pub const KEY_6: NonZeroU8 = NonZeroU8::new(0x23).unwrap();
+pub const KC_6: NonZeroU8 = NonZeroU8::new(0x23).unwrap();
 /// Keyboard 7 and &
-pub const KEY_7: NonZeroU8 = NonZeroU8::new(0x24).unwrap();
+pub const KC_7: NonZeroU8 = NonZeroU8::new(0x24).unwrap();
 /// Keyboard 8 and *
-pub const KEY_8: NonZeroU8 = NonZeroU8::new(0x25).unwrap();
+pub const KC_8: NonZeroU8 = NonZeroU8::new(0x25).unwrap();
 /// Keyboard 9 and (
-pub const KEY_9: NonZeroU8 = NonZeroU8::new(0x26).unwrap();
+pub const KC_9: NonZeroU8 = NonZeroU8::new(0x26).unwrap();
 /// Keyboard 0 and )
-pub const KEY_0: NonZeroU8 = NonZeroU8::new(0x27).unwrap();
+pub const KC_0: NonZeroU8 = NonZeroU8::new(0x27).unwrap();
 
 /// Keyboard Return (ENTER)
-pub const KEY_ENTER: NonZeroU8 = NonZeroU8::new(0x28).unwrap();
+pub const KC_ENTER: NonZeroU8 = NonZeroU8::new(0x28).unwrap();
 /// Keyboard ESCAPE
-pub const KEY_ESC: NonZeroU8 = NonZeroU8::new(0x29).unwrap();
+pub const KC_ESC: NonZeroU8 = NonZeroU8::new(0x29).unwrap();
 /// Keyboard DELETE (Backspace)
-pub const KEY_BACKSPACE: NonZeroU8 = NonZeroU8::new(0x2a).unwrap();
+pub const KC_BACKSPACE: NonZeroU8 = NonZeroU8::new(0x2A).unwrap();
 /// Keyboard Tab
-pub const KEY_TAB: NonZeroU8 = NonZeroU8::new(0x2b).unwrap();
+pub const KC_TAB: NonZeroU8 = NonZeroU8::new(0x2B).unwrap();
 /// Keyboard Spacebar
-pub const KEY_SPACE: NonZeroU8 = NonZeroU8::new(0x2c).unwrap();
+pub const KC_SPACE: NonZeroU8 = NonZeroU8::new(0x2C).unwrap();
 /// Keyboard - and _
-pub const KEY_MINUS: NonZeroU8 = NonZeroU8::new(0x2d).unwrap();
+pub const KC_MINUS: NonZeroU8 = NonZeroU8::new(0x2D).unwrap();
 /// Keyboard = and +
-pub const KEY_EQUAL: NonZeroU8 = NonZeroU8::new(0x2e).unwrap();
+pub const KC_EQUAL: NonZeroU8 = NonZeroU8::new(0x2E).unwrap();
 /// Keyboard [ and {
-pub const KEY_LEFTBRACE: NonZeroU8 = NonZeroU8::new(0x2f).unwrap();
+pub const KC_LEFTBRACE: NonZeroU8 = NonZeroU8::new(0x2F).unwrap();
 /// Keyboard ] and }
-pub const KEY_RIGHTBRACE: NonZeroU8 = NonZeroU8::new(0x30).unwrap();
+pub const KC_RIGHTBRACE: NonZeroU8 = NonZeroU8::new(0x30).unwrap();
 /// Keyboard \ and |
-pub const KEY_BACKSLASH: NonZeroU8 = NonZeroU8::new(0x31).unwrap();
+pub const KC_BACKSLASH: NonZeroU8 = NonZeroU8::new(0x31).unwrap();
 /// Keyboard Non-US # and ~
-pub const KEY_HASHTILDE: NonZeroU8 = NonZeroU8::new(0x32).unwrap();
+pub const KC_HASHTILDE: NonZeroU8 = NonZeroU8::new(0x32).unwrap();
 /// Keyboard ; and :
-pub const KEY_SEMICOLON: NonZeroU8 = NonZeroU8::new(0x33).unwrap();
+pub const KC_SEMICOLON: NonZeroU8 = NonZeroU8::new(0x33).unwrap();
 /// Keyboard ' and "
-pub const KEY_APOSTROPHE: NonZeroU8 = NonZeroU8::new(0x34).unwrap();
+pub const KC_APOSTROPHE: NonZeroU8 = NonZeroU8::new(0x34).unwrap();
 /// Keyboard ` and ~
-pub const KEY_GRAVE: NonZeroU8 = NonZeroU8::new(0x35).unwrap();
+pub const KC_GRAVE: NonZeroU8 = NonZeroU8::new(0x35).unwrap();
 /// Keyboard , and <
-pub const KEY_COMMA: NonZeroU8 = NonZeroU8::new(0x36).unwrap();
+pub const KC_COMMA: NonZeroU8 = NonZeroU8::new(0x36).unwrap();
 /// Keyboard . and >
-pub const KEY_DOT: NonZeroU8 = NonZeroU8::new(0x37).unwrap();
+pub const KC_DOT: NonZeroU8 = NonZeroU8::new(0x37).unwrap();
 /// Keyboard / and ?
-pub const KEY_SLASH: NonZeroU8 = NonZeroU8::new(0x38).unwrap();
+pub const KC_SLASH: NonZeroU8 = NonZeroU8::new(0x38).unwrap();
 /// Keyboard Caps Lock
-pub const KEY_CAPSLOCK: NonZeroU8 = NonZeroU8::new(0x39).unwrap();
+pub const KC_CAPSLOCK: NonZeroU8 = NonZeroU8::new(0x39).unwrap();
 
 /// Keyboard F1
-pub const KEY_F1: NonZeroU8 = NonZeroU8::new(0x3a).unwrap();
+pub const KC_F1: NonZeroU8 = NonZeroU8::new(0x3A).unwrap();
 /// Keyboard F2
-pub const KEY_F2: NonZeroU8 = NonZeroU8::new(0x3b).unwrap();
+pub const KC_F2: NonZeroU8 = NonZeroU8::new(0x3B).unwrap();
 /// Keyboard F3
-pub const KEY_F3: NonZeroU8 = NonZeroU8::new(0x3c).unwrap();
+pub const KC_F3: NonZeroU8 = NonZeroU8::new(0x3C).unwrap();
 /// Keyboard F4
-pub const KEY_F4: NonZeroU8 = NonZeroU8::new(0x3d).unwrap();
+pub const KC_F4: NonZeroU8 = NonZeroU8::new(0x3D).unwrap();
 /// Keyboard F5
-pub const KEY_F5: NonZeroU8 = NonZeroU8::new(0x3e).unwrap();
+pub const KC_F5: NonZeroU8 = NonZeroU8::new(0x3E).unwrap();
 /// Keyboard F6
-pub const KEY_F6: NonZeroU8 = NonZeroU8::new(0x3f).unwrap();
+pub const KC_F6: NonZeroU8 = NonZeroU8::new(0x3F).unwrap();
 /// Keyboard F7
-pub const KEY_F7: NonZeroU8 = NonZeroU8::new(0x40).unwrap();
+pub const KC_F7: NonZeroU8 = NonZeroU8::new(0x40).unwrap();
 /// Keyboard F8
-pub const KEY_F8: NonZeroU8 = NonZeroU8::new(0x41).unwrap();
+pub const KC_F8: NonZeroU8 = NonZeroU8::new(0x41).unwrap();
 /// Keyboard F9
-pub const KEY_F9: NonZeroU8 = NonZeroU8::new(0x42).unwrap();
+pub const KC_F9: NonZeroU8 = NonZeroU8::new(0x42).unwrap();
 /// Keyboard F10
-pub const KEY_F10: NonZeroU8 = NonZeroU8::new(0x43).unwrap();
+pub const KC_F10: NonZeroU8 = NonZeroU8::new(0x43).unwrap();
 /// Keyboard F11
-pub const KEY_F11: NonZeroU8 = NonZeroU8::new(0x44).unwrap();
+pub const KC_F11: NonZeroU8 = NonZeroU8::new(0x44).unwrap();
 /// Keyboard F12
-pub const KEY_F12: NonZeroU8 = NonZeroU8::new(0x45).unwrap();
+pub const KC_F12: NonZeroU8 = NonZeroU8::new(0x45).unwrap();
 
 /// Keyboard Print Screen
-pub const KEY_SYSRQ: NonZeroU8 = NonZeroU8::new(0x46).unwrap();
+pub const KC_SYSRQ: NonZeroU8 = NonZeroU8::new(0x46).unwrap();
 /// Keyboard Scroll Lock
-pub const KEY_SCROLLLOCK: NonZeroU8 = NonZeroU8::new(0x47).unwrap();
+pub const KC_SCROLLLOCK: NonZeroU8 = NonZeroU8::new(0x47).unwrap();
 /// Keyboard Pause
-pub const KEY_PAUSE: NonZeroU8 = NonZeroU8::new(0x48).unwrap();
+pub const KC_PAUSE: NonZeroU8 = NonZeroU8::new(0x48).unwrap();
 /// Keyboard Insert
-pub const KEY_INSERT: NonZeroU8 = NonZeroU8::new(0x49).unwrap();
+pub const KC_INSERT: NonZeroU8 = NonZeroU8::new(0x49).unwrap();
 /// Keyboard Home
-pub const KEY_HOME: NonZeroU8 = NonZeroU8::new(0x4a).unwrap();
+pub const KC_HOME: NonZeroU8 = NonZeroU8::new(0x4A).unwrap();
 /// Keyboard Page Up
-pub const KEY_PAGEUP: NonZeroU8 = NonZeroU8::new(0x4b).unwrap();
+pub const KC_PAGEUP: NonZeroU8 = NonZeroU8::new(0x4B).unwrap();
 /// Keyboard Delete Forward
-pub const KEY_DELETE: NonZeroU8 = NonZeroU8::new(0x4c).unwrap();
+pub const KC_DELETE: NonZeroU8 = NonZeroU8::new(0x4C).unwrap();
 /// Keyboard End
-pub const KEY_END: NonZeroU8 = NonZeroU8::new(0x4d).unwrap();
+pub const KC_END: NonZeroU8 = NonZeroU8::new(0x4D).unwrap();
 /// Keyboard Page Down
-pub const KEY_PAGEDOWN: NonZeroU8 = NonZeroU8::new(0x4e).unwrap();
+pub const KC_PAGEDOWN: NonZeroU8 = NonZeroU8::new(0x4E).unwrap();
 /// Keyboard Right Arrow
-pub const KEY_RIGHT: NonZeroU8 = NonZeroU8::new(0x4f).unwrap();
+pub const KC_RIGHT: NonZeroU8 = NonZeroU8::new(0x4F).unwrap();
 /// Keyboard Left Arrow
-pub const KEY_LEFT: NonZeroU8 = NonZeroU8::new(0x50).unwrap();
+pub const KC_LEFT: NonZeroU8 = NonZeroU8::new(0x50).unwrap();
 /// Keyboard Down Arrow
-pub const KEY_DOWN: NonZeroU8 = NonZeroU8::new(0x51).unwrap();
+pub const KC_DOWN: NonZeroU8 = NonZeroU8::new(0x51).unwrap();
 /// Keyboard Up Arrow
-pub const KEY_UP: NonZeroU8 = NonZeroU8::new(0x52).unwrap();
+pub const KC_UP: NonZeroU8 = NonZeroU8::new(0x52).unwrap();
 
 /// Keyboard Num Lock and Clear
-pub const KEY_NUMLOCK: NonZeroU8 = NonZeroU8::new(0x53).unwrap();
+pub const KC_NUMLOCK: NonZeroU8 = NonZeroU8::new(0x53).unwrap();
 /// Keypad /
-pub const KEY_KP_SLASH: NonZeroU8 = NonZeroU8::new(0x54).unwrap();
+pub const KC_KP_SLASH: NonZeroU8 = NonZeroU8::new(0x54).unwrap();
 /// Keypad *
-pub const KEY_KP_ASTERISK: NonZeroU8 = NonZeroU8::new(0x55).unwrap();
+pub const KC_KP_ASTERISK: NonZeroU8 = NonZeroU8::new(0x55).unwrap();
 /// Keypad -
-pub const KEY_KP_MINUS: NonZeroU8 = NonZeroU8::new(0x56).unwrap();
+pub const KC_KP_MINUS: NonZeroU8 = NonZeroU8::new(0x56).unwrap();
 /// Keypad +
-pub const KEY_KP_PLUS: NonZeroU8 = NonZeroU8::new(0x57).unwrap();
+pub const KC_KP_PLUS: NonZeroU8 = NonZeroU8::new(0x57).unwrap();
 /// Keypad ENTER
-pub const KEY_KP_ENTER: NonZeroU8 = NonZeroU8::new(0x58).unwrap();
+pub const KC_KP_ENTER: NonZeroU8 = NonZeroU8::new(0x58).unwrap();
 /// Keypad 1 and End
-pub const KEY_KP_1: NonZeroU8 = NonZeroU8::new(0x59).unwrap();
+pub const KC_KP_1: NonZeroU8 = NonZeroU8::new(0x59).unwrap();
 /// Keypad 2 and Down Arrow
-pub const KEY_KP_2: NonZeroU8 = NonZeroU8::new(0x5a).unwrap();
+pub const KC_KP_2: NonZeroU8 = NonZeroU8::new(0x5A).unwrap();
 /// Keypad 3 and PageDn
-pub const KEY_KP_3: NonZeroU8 = NonZeroU8::new(0x5b).unwrap();
+pub const KC_KP_3: NonZeroU8 = NonZeroU8::new(0x5B).unwrap();
 /// Keypad 4 and Left Arrow
-pub const KEY_KP_4: NonZeroU8 = NonZeroU8::new(0x5c).unwrap();
+pub const KC_KP_4: NonZeroU8 = NonZeroU8::new(0x5C).unwrap();
 /// Keypad 5
-pub const KEY_KP_5: NonZeroU8 = NonZeroU8::new(0x5d).unwrap();
+pub const KC_KP_5: NonZeroU8 = NonZeroU8::new(0x5D).unwrap();
 /// Keypad 6 and Right Arrow
-pub const KEY_KP_6: NonZeroU8 = NonZeroU8::new(0x5e).unwrap();
+pub const KC_KP_6: NonZeroU8 = NonZeroU8::new(0x5E).unwrap();
 /// Keypad 7 and Home
-pub const KEY_KP_7: NonZeroU8 = NonZeroU8::new(0x5f).unwrap();
+pub const KC_KP_7: NonZeroU8 = NonZeroU8::new(0x5F).unwrap();
 /// Keypad 8 and Up Arrow
-pub const KEY_KP_8: NonZeroU8 = NonZeroU8::new(0x60).unwrap();
+pub const KC_KP_8: NonZeroU8 = NonZeroU8::new(0x60).unwrap();
 /// Keypad 9 and Page Up
-pub const KEY_KP_9: NonZeroU8 = NonZeroU8::new(0x61).unwrap();
+pub const KC_KP_9: NonZeroU8 = NonZeroU8::new(0x61).unwrap();
 /// Keypad 0 and Insert
-pub const KEY_KP_0: NonZeroU8 = NonZeroU8::new(0x62).unwrap();
+pub const KC_KP_0: NonZeroU8 = NonZeroU8::new(0x62).unwrap();
 /// Keypad . and Delete
-pub const KEY_KP_DOT: NonZeroU8 = NonZeroU8::new(0x63).unwrap();
+pub const KC_KP_DOT: NonZeroU8 = NonZeroU8::new(0x63).unwrap();
 
 /// Keyboard Non-US \ and |
-pub const KEY_102ND: NonZeroU8 = NonZeroU8::new(0x64).unwrap();
+pub const KC_102ND: NonZeroU8 = NonZeroU8::new(0x64).unwrap();
 /// Keyboard Application
-pub const KEY_COMPOSE: NonZeroU8 = NonZeroU8::new(0x65).unwrap();
+pub const KC_COMPOSE: NonZeroU8 = NonZeroU8::new(0x65).unwrap();
 /// Keyboard Power
-pub const KEY_POWER: NonZeroU8 = NonZeroU8::new(0x66).unwrap();
+pub const KC_POWER: NonZeroU8 = NonZeroU8::new(0x66).unwrap();
 /// Keypad =
-pub const KEY_KP_EQUAL: NonZeroU8 = NonZeroU8::new(0x67).unwrap();
+pub const KC_KP_EQUAL: NonZeroU8 = NonZeroU8::new(0x67).unwrap();
 
 /// Keyboard F13
-pub const KEY_F13: NonZeroU8 = NonZeroU8::new(0x68).unwrap();
+pub const KC_F13: NonZeroU8 = NonZeroU8::new(0x68).unwrap();
 /// Keyboard F14
-pub const KEY_F14: NonZeroU8 = NonZeroU8::new(0x69).unwrap();
+pub const KC_F14: NonZeroU8 = NonZeroU8::new(0x69).unwrap();
 /// Keyboard F15
-pub const KEY_F15: NonZeroU8 = NonZeroU8::new(0x6a).unwrap();
+pub const KC_F15: NonZeroU8 = NonZeroU8::new(0x6A).unwrap();
 /// Keyboard F16
-pub const KEY_F16: NonZeroU8 = NonZeroU8::new(0x6b).unwrap();
+pub const KC_F16: NonZeroU8 = NonZeroU8::new(0x6B).unwrap();
 /// Keyboard F17
-pub const KEY_F17: NonZeroU8 = NonZeroU8::new(0x6c).unwrap();
+pub const KC_F17: NonZeroU8 = NonZeroU8::new(0x6C).unwrap();
 /// Keyboard F18
-pub const KEY_F18: NonZeroU8 = NonZeroU8::new(0x6d).unwrap();
+pub const KC_F18: NonZeroU8 = NonZeroU8::new(0x6D).unwrap();
 /// Keyboard F19
-pub const KEY_F19: NonZeroU8 = NonZeroU8::new(0x6e).unwrap();
+pub const KC_F19: NonZeroU8 = NonZeroU8::new(0x6E).unwrap();
 /// Keyboard F20
-pub const KEY_F20: NonZeroU8 = NonZeroU8::new(0x6f).unwrap();
+pub const KC_F20: NonZeroU8 = NonZeroU8::new(0x6F).unwrap();
 /// Keyboard F21
-pub const KEY_F21: NonZeroU8 = NonZeroU8::new(0x70).unwrap();
+pub const KC_F21: NonZeroU8 = NonZeroU8::new(0x70).unwrap();
 /// Keyboard F22
-pub const KEY_F22: NonZeroU8 = NonZeroU8::new(0x71).unwrap();
+pub const KC_F22: NonZeroU8 = NonZeroU8::new(0x71).unwrap();
 /// Keyboard F23
-pub const KEY_F23: NonZeroU8 = NonZeroU8::new(0x72).unwrap();
+pub const KC_F23: NonZeroU8 = NonZeroU8::new(0x72).unwrap();
 /// Keyboard F24
-pub const KEY_F24: NonZeroU8 = NonZeroU8::new(0x73).unwrap();
+pub const KC_F24: NonZeroU8 = NonZeroU8::new(0x73).unwrap();
 
 /// Keyboard Execute
-pub const KEY_OPEN: NonZeroU8 = NonZeroU8::new(0x74).unwrap();
+pub const KC_OPEN: NonZeroU8 = NonZeroU8::new(0x74).unwrap();
 /// Keyboard Help
-pub const KEY_HELP: NonZeroU8 = NonZeroU8::new(0x75).unwrap();
+pub const KC_HELP: NonZeroU8 = NonZeroU8::new(0x75).unwrap();
 /// Keyboard Menu
-pub const KEY_PROPS: NonZeroU8 = NonZeroU8::new(0x76).unwrap();
+pub const KC_PROPS: NonZeroU8 = NonZeroU8::new(0x76).unwrap();
 /// Keyboard Select
-pub const KEY_FRONT: NonZeroU8 = NonZeroU8::new(0x77).unwrap();
+pub const KC_FRONT: NonZeroU8 = NonZeroU8::new(0x77).unwrap();
 /// Keyboard Stop
-pub const KEY_STOP: NonZeroU8 = NonZeroU8::new(0x78).unwrap();
+pub const KC_STOP: NonZeroU8 = NonZeroU8::new(0x78).unwrap();
 /// Keyboard Again
-pub const KEY_AGAIN: NonZeroU8 = NonZeroU8::new(0x79).unwrap();
+pub const KC_AGAIN: NonZeroU8 = NonZeroU8::new(0x79).unwrap();
 /// Keyboard Undo
-pub const KEY_UNDO: NonZeroU8 = NonZeroU8::new(0x7a).unwrap();
+pub const KC_UNDO: NonZeroU8 = NonZeroU8::new(0x7A).unwrap();
 /// Keyboard Cut
-pub const KEY_CUT: NonZeroU8 = NonZeroU8::new(0x7b).unwrap();
+pub const KC_CUT: NonZeroU8 = NonZeroU8::new(0x7B).unwrap();
 /// Keyboard Copy
-pub const KEY_COPY: NonZeroU8 = NonZeroU8::new(0x7c).unwrap();
+pub const KC_COPY: NonZeroU8 = NonZeroU8::new(0x7C).unwrap();
 /// Keyboard Paste
-pub const KEY_PASTE: NonZeroU8 = NonZeroU8::new(0x7d).unwrap();
+pub const KC_PASTE: NonZeroU8 = NonZeroU8::new(0x7D).unwrap();
 /// Keyboard Find
-pub const KEY_FIND: NonZeroU8 = NonZeroU8::new(0x7e).unwrap();
+pub const KC_FIND: NonZeroU8 = NonZeroU8::new(0x7E).unwrap();
 /// Keyboard Mute
-pub const KEY_MUTE: NonZeroU8 = NonZeroU8::new(0x7f).unwrap();
+pub const KC_MUTE: NonZeroU8 = NonZeroU8::new(0x7F).unwrap();
 /// Keyboard Volume Up
-pub const KEY_VOLUMEUP: NonZeroU8 = NonZeroU8::new(0x80).unwrap();
+pub const KC_VOLUMEUP: NonZeroU8 = NonZeroU8::new(0x80).unwrap();
 /// Keyboard Volume Down
-pub const KEY_VOLUMEDOWN: NonZeroU8 = NonZeroU8::new(0x81).unwrap();
+pub const KC_VOLUMEDOWN: NonZeroU8 = NonZeroU8::new(0x81).unwrap();
 
 // 0x82  Keyboard Locking Caps Lock
 // 0x83  Keyboard Locking Num Lock
 // 0x84  Keyboard Locking Scroll Lock
+
 /// Keypad Comma
-pub const KEY_KPCOMMA: NonZeroU8 = NonZeroU8::new(0x85).unwrap();
+pub const KC_KP_COMMA: NonZeroU8 = NonZeroU8::new(0x85).unwrap();
 // 0x86  Keypad Equal Sign
 
 /// Keyboard International1
-pub const KEY_RO: NonZeroU8 = NonZeroU8::new(0x87).unwrap();
+pub const KC_RO: NonZeroU8 = NonZeroU8::new(0x87).unwrap();
 /// Keyboard International2
-pub const KEY_KATAKANAHIRAGANA: NonZeroU8 = NonZeroU8::new(0x88).unwrap();
+pub const KC_KATAKANAHIRAGANA: NonZeroU8 = NonZeroU8::new(0x88).unwrap();
 /// Keyboard International3
-pub const KEY_YEN: NonZeroU8 = NonZeroU8::new(0x89).unwrap();
+pub const KC_YEN: NonZeroU8 = NonZeroU8::new(0x89).unwrap();
 /// Keyboard International4
-pub const KEY_HENKAN: NonZeroU8 = NonZeroU8::new(0x8a).unwrap();
+pub const KC_HENKAN: NonZeroU8 = NonZeroU8::new(0x8A).unwrap();
 /// Keyboard International5
-pub const KEY_MUHENKAN: NonZeroU8 = NonZeroU8::new(0x8b).unwrap();
+pub const KC_MUHENKAN: NonZeroU8 = NonZeroU8::new(0x8B).unwrap();
 /// Keyboard International6
-pub const KEY_KPJPCOMMA: NonZeroU8 = NonZeroU8::new(0x8c).unwrap();
+pub const KC_KPJPCOMMA: NonZeroU8 = NonZeroU8::new(0x8C).unwrap();
 // 0x8d  Keyboard International7
 // 0x8e  Keyboard International8
 // 0x8f  Keyboard International9
 /// Keyboard LANG1
-pub const KEY_HANGEUL: NonZeroU8 = NonZeroU8::new(0x90).unwrap();
+pub const KC_HANGEUL: NonZeroU8 = NonZeroU8::new(0x90).unwrap();
 /// Keyboard LANG2
-pub const KEY_HANJA: NonZeroU8 = NonZeroU8::new(0x91).unwrap();
+pub const KC_HANJA: NonZeroU8 = NonZeroU8::new(0x91).unwrap();
 /// Keyboard LANG3
-pub const KEY_KATAKANA: NonZeroU8 = NonZeroU8::new(0x92).unwrap();
+pub const KC_KATAKANA: NonZeroU8 = NonZeroU8::new(0x92).unwrap();
 /// Keyboard LANG4
-pub const KEY_HIRAGANA: NonZeroU8 = NonZeroU8::new(0x93).unwrap();
+pub const KC_HIRAGANA: NonZeroU8 = NonZeroU8::new(0x93).unwrap();
 /// Keyboard LANG5
-pub const KEY_ZENKAKUHANKAKU: NonZeroU8 = NonZeroU8::new(0x94).unwrap();
+pub const KC_ZENKAKUHANKAKU: NonZeroU8 = NonZeroU8::new(0x94).unwrap();
 // 0x95  Keyboard LANG6
 // 0x96  Keyboard LANG7
 // 0x97  Keyboard LANG8
@@ -356,9 +357,9 @@ pub const KEY_ZENKAKUHANKAKU: NonZeroU8 = NonZeroU8::new(0x94).unwrap();
 // 0xb4  Currency Unit
 // 0xb5  Currency Sub-unit
 /// Keypad (
-pub const KEY_KPLEFTPAREN: NonZeroU8 = NonZeroU8::new(0xb6).unwrap();
+pub const KC_KP_LEFTPAREN: NonZeroU8 = NonZeroU8::new(0xB6).unwrap();
 /// Keypad )
-pub const KEY_KPRIGHTPAREN: NonZeroU8 = NonZeroU8::new(0xb7).unwrap();
+pub const KC_KP_RIGHTPAREN: NonZeroU8 = NonZeroU8::new(0xB7).unwrap();
 // 0xb8  Keypad {
 // 0xb9  Keypad }
 // 0xba  Keypad Tab
@@ -399,39 +400,39 @@ pub const KEY_KPRIGHTPAREN: NonZeroU8 = NonZeroU8::new(0xb7).unwrap();
 // 0xdd  Keypad Hexadecimal
 
 /// Keyboard Left Control
-pub const KEY_LEFTCTRL: NonZeroU8 = NonZeroU8::new(0xe0).unwrap();
+pub const KC_LEFTCTRL: NonZeroU8 = NonZeroU8::new(0xE0).unwrap();
 /// Keyboard Left Shift
-pub const KEY_LEFTSHIFT: NonZeroU8 = NonZeroU8::new(0xe1).unwrap();
+pub const KC_LEFTSHIFT: NonZeroU8 = NonZeroU8::new(0xE1).unwrap();
 /// Keyboard Left Alt
-pub const KEY_LEFTALT: NonZeroU8 = NonZeroU8::new(0xe2).unwrap();
+pub const KC_LEFTALT: NonZeroU8 = NonZeroU8::new(0xE2).unwrap();
 /// Keyboard Left GUI
-pub const KEY_LEFTMETA: NonZeroU8 = NonZeroU8::new(0xe3).unwrap();
+pub const KC_LEFTMETA: NonZeroU8 = NonZeroU8::new(0xE3).unwrap();
 /// Keyboard Right Control
-pub const KEY_RIGHTCTRL: NonZeroU8 = NonZeroU8::new(0xe4).unwrap();
+pub const KC_RIGHTCTRL: NonZeroU8 = NonZeroU8::new(0xE4).unwrap();
 /// Keyboard Right Shift
-pub const KEY_RIGHTSHIFT: NonZeroU8 = NonZeroU8::new(0xe5).unwrap();
+pub const KC_RIGHTSHIFT: NonZeroU8 = NonZeroU8::new(0xE5).unwrap();
 /// Keyboard Right Alt
-pub const KEY_RIGHTALT: NonZeroU8 = NonZeroU8::new(0xe6).unwrap();
+pub const KC_RIGHTALT: NonZeroU8 = NonZeroU8::new(0xE6).unwrap();
 /// Keyboard Right GUI
-pub const KEY_RIGHTMETA: NonZeroU8 = NonZeroU8::new(0xe7).unwrap();
+pub const KC_RIGHTMETA: NonZeroU8 = NonZeroU8::new(0xE7).unwrap();
 
-pub const KEY_MEDIA_PLAYPAUSE: NonZeroU8 = NonZeroU8::new(0xe8).unwrap();
-pub const KEY_MEDIA_STOPCD: NonZeroU8 = NonZeroU8::new(0xe9).unwrap();
-pub const KEY_MEDIA_PREVIOUSSONG: NonZeroU8 = NonZeroU8::new(0xea).unwrap();
-pub const KEY_MEDIA_NEXTSONG: NonZeroU8 = NonZeroU8::new(0xeb).unwrap();
-pub const KEY_MEDIA_EJECTCD: NonZeroU8 = NonZeroU8::new(0xec).unwrap();
-pub const KEY_MEDIA_VOLUMEUP: NonZeroU8 = NonZeroU8::new(0xed).unwrap();
-pub const KEY_MEDIA_VOLUMEDOWN: NonZeroU8 = NonZeroU8::new(0xee).unwrap();
-pub const KEY_MEDIA_MUTE: NonZeroU8 = NonZeroU8::new(0xef).unwrap();
-pub const KEY_MEDIA_WWW: NonZeroU8 = NonZeroU8::new(0xf0).unwrap();
-pub const KEY_MEDIA_BACK: NonZeroU8 = NonZeroU8::new(0xf1).unwrap();
-pub const KEY_MEDIA_FORWARD: NonZeroU8 = NonZeroU8::new(0xf2).unwrap();
-pub const KEY_MEDIA_STOP: NonZeroU8 = NonZeroU8::new(0xf3).unwrap();
-pub const KEY_MEDIA_FIND: NonZeroU8 = NonZeroU8::new(0xf4).unwrap();
-pub const KEY_MEDIA_SCROLLUP: NonZeroU8 = NonZeroU8::new(0xf5).unwrap();
-pub const KEY_MEDIA_SCROLLDOWN: NonZeroU8 = NonZeroU8::new(0xf6).unwrap();
-pub const KEY_MEDIA_EDIT: NonZeroU8 = NonZeroU8::new(0xf7).unwrap();
-pub const KEY_MEDIA_SLEEP: NonZeroU8 = NonZeroU8::new(0xf8).unwrap();
-pub const KEY_MEDIA_COFFEE: NonZeroU8 = NonZeroU8::new(0xf9).unwrap();
-pub const KEY_MEDIA_REFRESH: NonZeroU8 = NonZeroU8::new(0xfa).unwrap();
-pub const KEY_MEDIA_CALC: NonZeroU8 = NonZeroU8::new(0xfb).unwrap();
+pub const KC_M_PLAYPAUSE: NonZeroU8 = NonZeroU8::new(0xE8).unwrap();
+pub const KC_M_STOPCD: NonZeroU8 = NonZeroU8::new(0xE9).unwrap();
+pub const KC_M_PREVIOUSSONG: NonZeroU8 = NonZeroU8::new(0xEA).unwrap();
+pub const KC_M_NEXTSONG: NonZeroU8 = NonZeroU8::new(0xEB).unwrap();
+pub const KC_M_EJECTCD: NonZeroU8 = NonZeroU8::new(0xEC).unwrap();
+pub const KC_M_VOLUMEUP: NonZeroU8 = NonZeroU8::new(0xED).unwrap();
+pub const KC_M_VOLUMEDOWN: NonZeroU8 = NonZeroU8::new(0xEE).unwrap();
+pub const KC_M_MUTE: NonZeroU8 = NonZeroU8::new(0xEF).unwrap();
+pub const KC_M_WWW: NonZeroU8 = NonZeroU8::new(0xF0).unwrap();
+pub const KC_M_BACK: NonZeroU8 = NonZeroU8::new(0xF1).unwrap();
+pub const KC_M_FORWARD: NonZeroU8 = NonZeroU8::new(0xF2).unwrap();
+pub const KC_M_STOP: NonZeroU8 = NonZeroU8::new(0xF3).unwrap();
+pub const KC_M_FIND: NonZeroU8 = NonZeroU8::new(0xF4).unwrap();
+pub const KC_M_SCROLLUP: NonZeroU8 = NonZeroU8::new(0xF5).unwrap();
+pub const KC_M_SCROLLDOWN: NonZeroU8 = NonZeroU8::new(0xF6).unwrap();
+pub const KC_M_EDIT: NonZeroU8 = NonZeroU8::new(0xF7).unwrap();
+pub const KC_M_SLEEP: NonZeroU8 = NonZeroU8::new(0xF8).unwrap();
+pub const KC_M_COFFEE: NonZeroU8 = NonZeroU8::new(0xF9).unwrap();
+pub const KC_M_REFRESH: NonZeroU8 = NonZeroU8::new(0xFA).unwrap();
+pub const KC_M_CALC: NonZeroU8 = NonZeroU8::new(0xFB).unwrap();

@@ -45,13 +45,14 @@ pub fn define_keyboard_configuration_macro(input: TokenStream) -> TokenStream {
 	let name = read_env_value(&ast.name).unwrap();
 	let author = read_env_value(&ast.author).unwrap();
 	let id = read_env_value(&ast.id).unwrap();
-	let version = read_env_value(&ast.version).unwrap();
-	let keymap = read_env_value(&ast.keymap).unwrap();
 
+	let version: u32 = read_env_value(&ast.version).unwrap().parse().unwrap();
+
+	let keymap = read_env_value(&ast.keymap).unwrap();
 	let keymap: ExprArray = syn::parse_str(&keymap).unwrap();
 
 	quote! {
-		Configuration {
+		::keyboards::config::Configuration {
 			name: #name,
 			author: #author,
 			id: #id,

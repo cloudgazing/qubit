@@ -2,25 +2,28 @@
 
 use core::num::NonZeroU8;
 
-use keyboards::keycodes::{KEY_A, KEY_LEFTCTRL, KEY_RIGHTMETA};
-use usbd_hid::descriptor::KeyboardReport;
+use keyboards::keycodes::{KC_A, KC_LEFTCTRL, KC_RIGHTMETA, RESERVED};
 
+use crate::connection::hid::KEYPRESS_REPORT_IN_ID;
 use crate::keymap;
 
-const PRESSED_BITMAPS_SIZE: usize = crate::KM_SIZE.div_ceil(usize::BITS as usize);
+// id + modifier + reserved + 6 keys
+pub type RawKeyboardReport = [u8; 9];
+
+const PRESSED_KEYS_BITMAPS_LEN: usize = crate::KM_SIZE.div_ceil(usize::BITS as usize);
 
 /// Checks the keycode is within the range of "normal" codes.
 fn is_normal_key(key_code: NonZeroU8) -> bool {
 	// 0xdd  Keypad Hexadecimal
 	const KEYPAD_HEXDEC: NonZeroU8 = NonZeroU8::new(0xdd).unwrap();
 
-	key_code >= KEY_A && key_code <= KEYPAD_HEXDEC
+	key_code >= KC_A && key_code <= KEYPAD_HEXDEC
 }
 
 /// Checks if the keycode matches a modifier scan code and turns it into it's modifier mask
 /// counterpart.
 fn is_modifier_key(key_code: NonZeroU8) -> Option<NonZeroU8> {
-	if key_code >= KEY_LEFTCTRL && key_code <= KEY_RIGHTMETA {
+	if key_code >= KC_LEFTCTRL && key_code <= KC_RIGHTMETA {
 		let modifier_mask: u8 = 1 << (key_code.get() & 0x07);
 
 		// Safety: This is guaranteed to be non-zero since a bitand with the 0x07 mask will always result in
@@ -36,16 +39,15 @@ fn is_modifier_key(key_code: NonZeroU8) -> Option<NonZeroU8> {
 /// # Safety
 ///
 /// Calling this function before the active keymap was initiated is **undefined behavior**.
-pub unsafe fn construct_keyboard_report(pressed_bitmaps: [usize; PRESSED_BITMAPS_SIZE]) -> KeyboardReport {
-	const SIZE: usize = usize::BITS as usize;
+pub unsafe fn construct_6kro_report(pressed_keys: [usize; PRESSED_KEYS_BITMAPS_LEN]) -> RawKeyboardReport {
+	const USIZE_BITS: usize = usize::BITS as usize;
 
-	let mut modifier = 0_u8;
+	let mut report: RawKeyboardReport = [KEYPRESS_REPORT_IN_ID, 0, RESERVED, 0, 0, 0, 0, 0, 0];
 
-	let mut keycodes = [0_u8; SIZE];
-	let mut i = 0;
+	let mut i = 3;
 
-	for (index, mut bitmap) in pressed_bitmaps.into_iter().enumerate() {
-		let offset = index * SIZE;
+	for (index, mut bitmap) in pressed_keys.into_iter().enumerate() {
+		let offset = index * USIZE_BITS;
 
 		while bitmap != 0 {
 			let pressed_bit = bitmap.trailing_zeros() as usize;
@@ -56,12 +58,12 @@ pub unsafe fn construct_keyboard_report(pressed_bitmaps: [usize; PRESSED_BITMAPS
 			let code = unsafe { keymap::get_keymap_keycode(flat_index) };
 
 			if let Some(code) = NonZeroU8::new(code) {
-				if is_normal_key(code) {
-					keycodes[i] = code.get();
+				if i < 9 && is_normal_key(code) {
+					report[i] = code.get();
 
 					i += 1;
 				} else if let Some(mod_code) = is_modifier_key(code) {
-					modifier |= mod_code.get();
+					report[1] |= mod_code.get();
 				}
 			}
 
@@ -70,13 +72,44 @@ pub unsafe fn construct_keyboard_report(pressed_bitmaps: [usize; PRESSED_BITMAPS
 		}
 	}
 
-	// For now just take the first 6 keys until N-Key rollover is implemented.
-	let keycodes = keycodes[0..6].try_into().unwrap();
-
-	KeyboardReport {
-		modifier,
-		reserved: 0,
-		leds: 0,
-		keycodes,
-	}
+	report
 }
+
+// /// # Safety
+// ///
+// /// Calling this function before the active keymap was initiated is **undefined behavior**.
+// pub unsafe fn _construct_nkro_report(pressed_keys: [usize; PRESSED_BITMAPS_SIZE]) -> RawKeyboardReport {
+// 	const USIZE_BITS: usize = usize::BITS as usize;
+
+// 	let mut modifier = 0_u8;
+
+// 	let mut keycodes = [0_u8; USIZE_BITS];
+
+// 	let mut i = 0;
+
+// 	for (index, mut bitmap) in pressed_keys.into_iter().enumerate() {
+// 		let offset = index * USIZE_BITS;
+
+// 		while bitmap != 0 {
+// 			let pressed_bit = bitmap.trailing_zeros() as usize;
+
+// 			let flat_index = offset + pressed_bit;
+
+// 			// SAFETY: The caller gurantees the keymap was initiated.
+// 			let code = unsafe { keymap::get_keymap_keycode(flat_index) };
+
+// 			if let Some(code) = NonZeroU8::new(code) {
+// 				if is_normal_key(code) {
+// 					keycodes[i] = code.get();
+
+// 					i += 1;
+// 				} else if let Some(mod_code) = is_modifier_key(code) {
+// 					modifier |= mod_code.get();
+// 				}
+// 			}
+
+// 			// Clear the bit
+// 			bitmap &= !(1 << pressed_bit);
+// 		}
+// 	}
+// }

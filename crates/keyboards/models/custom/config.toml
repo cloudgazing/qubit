@@ -1,186 +1,104 @@
-name = "Test Board"
+# This serves as an example and it should be changed to fit a specific model configuration.
+
+name = "CustomBoard"
 
 [firmware]
 # The board author or manufacturer.
-author = ""
-# The id diferentates the board from the others.
+author = "custom"
+# The id diferentates the board from the others which have the same author.
 id = "69420"
 # The version of the compiled firmware. This should be incremented with each version
 # to make updating the board possible.
-version = "0.0.1"
+# For more info on how semver works check: https://semver.org
+version = "0.0.001"
 
 [keymap]
-# Whether to use the pre-defined symbols for key names or use the scan codes defined in
-# the USB spec. It's recommended to leave this to false and use const values which are
-# already defined.
-use_scan_codes = false
 # The number of rows to use. This has to match the number of elements in the 'rows' table.
 rows = 5
 # The number of colsumns to use. This has to match the lenght of each row.
 cols = 14
 
 [rows]
+# https://usb.org/sites/default/files/hut1_3_0.pdf (page 88)
+# Define 5 rows each containing 14 elements, 
+# A value of 0x00 indicates an empty space.
 0 = [
-	"KEY_ESC",
-	"KEY_1",
-	"KEY_2",
-	"KEY_3",
-	"KEY_4",
-	"KEY_5",
-	"KEY_6",
-	"KEY_7",
-	"KEY_8",
-	"KEY_9",
-	"KEY_0",
-	"KEY_MINUS",
-	"KEY_EQUAL",
-	"KEY_BACKSPACE"
+	0x29,
+	0x1e,
+	0x1f,
+	0x20,
+	0x21,
+	0x22,
+	0x23,
+	0x24,
+	0x25,
+	0x26,
+	0x27,
+	0x2d,
+	0x2e,
+	0x2a,
 ]
 1 = [
-	"KEY_TAB",
-	"KEY_Q",
-	"KEY_W",
-	"KEY_E",
-	"KEY_R",
-	"KEY_T",
-	"KEY_Y",
-	"KEY_U",
-	"KEY_I",
-	"KEY_O",
-	"KEY_P",
-	"KEY_LEFTBRACE",
-	"KEY_RIGHTBRACE",
-	"KEY_BACKSLASH"
+	0x2b,
+	0x14,
+	0x1a,
+	0x08,
+	0x15,
+	0x17,
+	0x18,
+	0x19,
+	0x0c,
+	0x12,
+	0x13,
+	0x2f,
+	0x30,
+	0x31,
 ]
 2 = [
-	"KEY_CAPSLOCK",
-	"KEY_A",
-	"KEY_S",
-	"KEY_D",
-	"KEY_F",
-	"KEY_G",
-	"KEY_H",
-	"KEY_J",
-	"KEY_K",
-	"KEY_L",
-	"KEY_SEMICOLON",
-	"KEY_APOSTROPHE",
-	"0x00",
-	"KEY_ENTER"
+	0x39,
+	0x04,
+	0x16,
+	0x07,
+	0x09,
+	0x0a,
+	0x0b,
+	0x0d,
+	0x0e,
+	0x0f,
+	0x33,
+	0x34,
+	0x00,
+	0x28,
 ]
 3 = [
-	"KEY_LEFTSHIFT",
-	"KEY_Z",
-	"KEY_X",
-	"KEY_C",
-	"KEY_V",
-	"KEY_B",
-	"KEY_N",
-	"KEY_M",
-	"KEY_COMMA",
-	"KEY_DOT",
-	"KEY_SLASH",
-	"11",
-	"12",
-	"KEY_RIGHTSHIFT"
+	0xe1,
+	0x1d,
+	0x1b,
+	0x06,
+	0x19,
+	0x10,
+	0x11,
+	0x2c,
+	0x36,
+	0x37,
+	0x38,
+	0x0b,
+	0x0c,
+	0xe5,
 ]
 4 = [
-	"KEY_LEFTCTRL",
-	"KEY_LEFTALT",
-	"KEY_LEFTMETA",
-	"0x00",
-	"0x00",
-	"0x00",
-	"KEY_SPACE",
-	"0x00",
-	"0x00",
-	"0x00",
-	"0x00",
-	"KEY_RIGHTMETA",
-	"KEY_RIGHTALT",
-	"KEY_RIGHTCTRL"
+	0xe0,
+	0xe2,
+	0xe3,
+	0x00,
+	0x00,
+	0x00,
+	0x2c,
+	0x00,
+	0x00,
+	0x00,
+	0x00,
+	0xe7,
+	0xe6,
+	0xe4,
 ]
-
-# OR using scan codes
-# https://usb.org/sites/default/files/hut1_3_0.pdf (page 88)
-
-# 0 = [
-# 	0x29,
-# 	0x1e,
-# 	0x1f,
-# 	0x20,
-# 	0x21,
-# 	0x22,
-# 	0x23,
-# 	0x24,
-# 	0x25,
-# 	0x26,
-# 	0x27,
-# 	0x2d,
-# 	0x2e,
-# 	0x2a,
-# ]
-# 1 = [
-# 	0x2b,
-# 	0x14,
-# 	0x1a,
-# 	0x08,
-# 	0x15,
-# 	0x17,
-# 	0x18,
-# 	0x19,
-# 	0x0c,
-# 	0x12,
-# 	0x13,
-# 	0x2f,
-# 	0x30,
-# 	0x31,
-# ]
-# 2 = [
-# 	0x39,
-# 	0x04,
-# 	0x16,
-# 	0x07,
-# 	0x09,
-# 	0x0a,
-# 	0x0b,
-# 	0x0d,
-# 	0x0e,
-# 	0x0f,
-# 	0x33,
-# 	0x34,
-# 	0x00,
-# 	0x28,
-# ]
-# 3 = [
-# 	0xe1,
-# 	0x1d,
-# 	0x1b,
-# 	0x06,
-# 	0x19,
-# 	0x10,
-# 	0x11,
-# 	0x2c,
-# 	0x36,
-# 	0x37,
-# 	0x38,
-# 	0x0b,
-# 	0x0c,
-# 	0xe5,
-# ]
-# 4 = [
-# 	0xe0,
-# 	0xe2,
-# 	0xe3,
-# 	0x00,
-# 	0x00,
-# 	0x00,
-# 	0x2c,
-# 	0x00,
-# 	0x00,
-# 	0x00,
-# 	0x00,
-# 	0xe7,
-# 	0xe6,
-# 	0xe4,
-# ]
