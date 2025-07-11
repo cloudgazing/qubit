@@ -1,2 +1,10 @@
+# For channels newer than nightly-2025-06-06 use this fork:
+# https://github.com/StripedMonkey/elf2uf2-rs/
+# 
+# To install: cargo install --git https://github.com/StripedMonkey/elf2uf2-rs/
+# 
+# See issue: https://github.com/JoNil/elf2uf2-rs/issues/40
+
 [toolchain]
-channel = "nightly"
+channel = "nightly-2025-07-04"
+targets = ["thumbv6m-none-eabi"]

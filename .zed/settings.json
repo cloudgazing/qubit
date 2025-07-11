@@ -6,9 +6,9 @@
 	"lsp": {
 		"rust-analyzer": {
 			"initialization_options": {
-				"cargo": {
-					"target": "thumbv6m-none-eabi"
-				},
+				// "cargo": {
+				// 	"target": "thumbv6m-none-eabi"
+				// },
 				"check": {
 					"allTargets": false
 				}

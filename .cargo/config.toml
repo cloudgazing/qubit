@@ -1,10 +1,15 @@
-[target.thumbv6m-none-eabi]
-# flip-link doesn't support variables in the link script.
-# linker = "flip-link"
-runner = "elf2uf2-rs -d -s"
+include = "./config-extend.toml"
 
-[build]
-target = "thumbv6m-none-eabi"
+target-applies-to-host = false
+
+[unstable]
+config-include = true
+host-config = true
+target-applies-to-host = true
 
 [env]
 DEFMT_LOG = "debug"
+
+[target.thumbv6m-none-eabi]
+linker = "flip-link"
+runner = "elf2uf2-rs -d -s"

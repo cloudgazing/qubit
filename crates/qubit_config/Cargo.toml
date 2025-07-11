@@ -1,0 +1,21 @@
+[package]
+name = "qubit_config"
+version = "0.0.16"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# Workspace
+toml = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+# External
+semver = { version = "1.0.26", features = ["serde"], optional = true }
+
+[features]
+default = []
+std = ["semver", "serde", "toml"]

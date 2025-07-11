@@ -1,0 +1,19 @@
+[config]
+default_to_workspace = false
+
+[tasks.prepare]
+command = "cargo"
+args = ["-Zscript", "./scripts/prepare.rs", "${@}"]
+
+[tasks.build]
+command = "cargo"
+args = ["build", "--target", "thumbv6m-none-eabi"]
+dependencies = ["prepare"]
+
+[tasks.run]
+env = { "CARGO_BUILD_TARGET" = "thumbv6m-none-eabi" }
+command = "cargo"
+args = ["run", "-r"]
+
+[tasks.firmware]
+dependencies = ["prepare", "run"]

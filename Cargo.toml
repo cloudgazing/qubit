@@ -1,6 +1,11 @@
 [workspace]
 resolver = "3"
-members = ["crates/qubit", "crates/qubit_macros", "crates/keyboards"]
+members = [
+	"crates/qubit",
+	"crates/qubit_macros",
+	"crates/qubit_device",
+	"crates/qubit_config",
+]
 default-members = ["crates/qubit"]
 
 [workspace.package]
@@ -19,7 +24,8 @@ strip = true
 # Workspace crates
 qubit = { path = "crates/qubit" }
 qubit_macros = { path = "crates/qubit_macros" }
-keyboards = { path = "crates/keyboards" }
+qubit_device = { path = "crates/qubit_device" }
+qubit_config = { path = "crates/qubit_config" }
 # External crates
 cortex-m = { version = "0.7.7", features = ["inline-asm"] }
 cortex-m-rt = "0.7.5"
@@ -32,13 +38,27 @@ rp2040-hal = "0.11.0"
 usb-device = "0.3.2"
 usbd-hid = "0.8.2"
 usbd-serial = "0.2.2"
+constcat = "0.6.1"
+# STD
+quote = "1.0.40"
+# proc-macro-error2 = "2.0.1"
+proc-macro2 = "1.0.95"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_arrays = "0.2.0"
 serde_json = "1.0.140"
-toml = "0.8.22"
+syn = "2.0.104"
+toml = "0.8.23"
 
 [workspace.lints.rust]
 unused_crate_dependencies = "warn"
+unexpected_cfgs = { level = "warn", check-cfg = [
+	'cfg(processor, values("RP2040"))',
+	'cfg(keyboard)',
+	'cfg(device values("import", "custom"))',
+] }
 
 [workspace.lints.clippy]
+todo = "warn"
 pedantic = "warn"
+undocumented_unsafe_blocks = "warn"
+# missing_docs_in_private_items = "warn"
