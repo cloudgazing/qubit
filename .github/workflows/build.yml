@@ -21,10 +21,12 @@ jobs:
       - name: Rustfmt Check
         uses: actions-rust-lang/rustfmt@v1
 
-  build_rp2040:
+  build:
     strategy:
       matrix:
         BUILD_TARGET: [release]
+        device:
+          - { author: cloudgazing, model: quartz }
         os: [macos-latest, ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -32,8 +34,16 @@ jobs:
 
       # Install the required dependencies.
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: clippy
       - name: Install dependencies
         run: cargo install cargo-make flip-link
 
-      - name: Build RP2040
-        run: cargo make build --author cloudgazing --model quartz
+      - name: Prepare device
+        run: cargo make prepare --author ${{ matrix.device.author }} --model ${{ matrix.device.model }}
+
+      - name: Run clippy
+        run: cargo clippy
+
+      - name: Build device
+        run: cargo make build
