@@ -10,3 +10,6 @@
 # Any general secrets
 .env
 .env.secret.toml
+
+# Generated files
+.cargo/config-extend.toml
