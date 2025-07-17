@@ -46,4 +46,4 @@ jobs:
         run: cargo clippy
 
       - name: Build device
-        run: cargo make build
+        run: cargo build
