@@ -1,18 +1,15 @@
 use core::mem::MaybeUninit;
 
-use usb_device::bus::UsbBusAllocator;
 use usb_device::device::{StringDescriptors, UsbDevice, UsbDeviceBuilder, UsbVidPid};
 
 use qubit_config::general::Device;
 
 use crate::DEVICE_CONFIG;
 use crate::codegen::{KeyboardMatrix, USB_PID, USB_VID};
-use crate::setup::hal::usb::UsbBus;
+use crate::setup::{UsbBus, UsbBusAllocator};
 
-// #[cfg(feature = "keyboard")]
+#[cfg(keyboard)]
 mod keyboard;
-#[cfg(feature = "serial")]
-mod serial;
 
 const DEVICE_CLASS: u8 = {
 	match DEVICE_CONFIG.device {
@@ -21,12 +18,12 @@ const DEVICE_CLASS: u8 = {
 };
 
 // USB singletons.
-static mut USB_BUS_ALLOC: MaybeUninit<UsbBusAllocator<UsbBus>> = MaybeUninit::uninit();
+static mut USB_BUS_ALLOC: MaybeUninit<UsbBusAllocator> = MaybeUninit::uninit();
 static mut USB_DEVICE: MaybeUninit<UsbDevice<UsbBus>> = MaybeUninit::uninit();
 
 #[derive(Debug)]
 pub struct QubitDevice {
-	// #[cfg(feature = "keyboard")]
+	#[cfg(keyboard)]
 	pub keyboard: keyboard::KeyboardInstance,
 }
 
@@ -38,7 +35,7 @@ impl QubitDevice {
 	/// This method will initialize all the static variables the firmware needs. This must be called
 	/// **only once** for the lifetime of the program AND **before** enabling the
 	/// interrupts.
-	pub unsafe fn new(bus_alloc: UsbBusAllocator<UsbBus>, matrix: KeyboardMatrix) -> Self {
+	pub unsafe fn new(bus_alloc: UsbBusAllocator, matrix: KeyboardMatrix) -> Self {
 		let usb_bus_alloc = {
 			let ptr = &raw mut USB_BUS_ALLOC;
 
@@ -56,14 +53,8 @@ impl QubitDevice {
 		// The same order the classes were initialized needs to be used when polling the usb bus.
 		// See the [`poll_device`] function.
 
-		// SAFETY: The caller guarantees this will be called only once.
-		#[cfg(feature = "serial")]
-		unsafe {
-			serial::init_class(usb_bus_alloc);
-		}
-
-		// #[cfg(feature = "keyboard")]
 		// SAFETY: Serial was initialized above and the caller guarantees this will be called only once.
+		#[cfg(keyboard)]
 		let keyboard = unsafe { keyboard::KeyboardInstance::new(usb_bus_alloc, matrix) };
 
 		let usb_device = {
@@ -87,7 +78,7 @@ impl QubitDevice {
 		}
 
 		QubitDevice {
-			// #[cfg(feature = "keyboard")]
+			#[cfg(keyboard)]
 			keyboard,
 		}
 	}
@@ -110,31 +101,20 @@ pub unsafe fn poll_device() {
 		unsafe { (*ptr).assume_init_mut() }
 	};
 
-	// #[cfg(feature = "keyboard")]
 	// SAFETY: The function is called inside an interrupt. The caller guarantees initialization
 	// by calling the proper method.
+	#[cfg(keyboard)]
 	let keyboard_hid = unsafe { keyboard::get_mut() };
-
-	// SAFETY: The function is called inside an interrupt. The caller guarantees initialization
-	// by calling the serial::init_class function.
-	#[cfg(feature = "serial")]
-	let serial_port = unsafe { serial::get_mut() };
 
 	// The classes are passed in the same order they were configured in.
 	let may_have_data = device.poll(&mut [
-		#[cfg(feature = "serial")]
-		serial_port,
-		// #[cfg(feature = "keyboard")]
+		#[cfg(keyboard)]
 		keyboard_hid,
 	]);
 
 	if may_have_data {
 		// Check for an incoming keyboard report.
-		// #[cfg(feature = "keyboard")]
-		keyboard::process_incoming_report(
-			keyboard_hid,
-			#[cfg(feature = "serial")]
-			serial_port,
-		);
+		#[cfg(keyboard)]
+		keyboard::process_incoming_report(keyboard_hid);
 	}
 }

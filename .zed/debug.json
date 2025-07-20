@@ -1,0 +1,19 @@
+// `probe-rs-debugger` extension is currently not on store.
+//
+// To install locally see: https://github.com/probe-rs/zed-extension
+[
+	{
+		"label": "Launch debugger for STM32F411CEUx",
+		"adapter": "probe-rs",
+		"type": "probe-rs-debug",
+		"request": "launch",
+		"cwd": "$ZED_WORKTREE_ROOT",
+		"server": "127.0.0.1:50000",
+		"chip": "STM32F411CEUx",
+		"coreConfigs": [
+			{
+				"programBinary": "target/thumbv7em-none-eabihf/debug/qubit"
+			}
+		]
+	}
+]

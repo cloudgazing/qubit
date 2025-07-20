@@ -8,7 +8,7 @@ pub const NAME: &str = "Quartz";
 pub const AUTHOR: &str = "cloudgazing";
 pub const VERSION: Version = Version::new(Api::V0, 0, 0, 1);
 pub const DEVICE: Device = Device::Keyboard;
-pub const LED_PIN: Option<usize> = Some(25);
+pub const LED_PIN: Option<&str> = Some("25");
 
 // Keyboard
 pub const PROCESSOR: Processor = Processor::RP2040;
@@ -17,8 +17,10 @@ pub const FLASH: u32 = 0x0080_0000;
 // Keyboard keymap
 pub const ROW_NUM: usize = 5;
 pub const COL_NUM: usize = 14;
-pub const ROW_PINS: [usize; ROW_NUM] = [16, 17, 18, 19, 20];
-pub const COL_PINS: [usize; COL_NUM] = [0, 1, 2, 3, 26, 27, 6, 7, 8, 9, 10, 11, 12, 13];
+pub const ROW_PINS: [&str; ROW_NUM] = ["16", "17", "18", "19", "20"];
+pub const COL_PINS: [&str; COL_NUM] = [
+	"0", "1", "2", "3", "26", "27", "6", "7", "8", "9", "10", "11", "12", "13",
+];
 
 // Mac keymap
 #[rustfmt::skip]

@@ -35,6 +35,9 @@ impl<const R: usize, const C: usize> Keymap<R, C> {
 		size
 	}
 
+	/// # Panics
+	///
+	/// Panics if there is a logical error and the length assertion fails.
 	#[must_use]
 	pub const fn get_packed<const S: usize>(&self) -> [u8; S] {
 		let keymap = &self.0;
