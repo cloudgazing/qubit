@@ -8,7 +8,7 @@ host-config = true
 target-applies-to-host = true
 
 [env]
-DEFMT_LOG = "debug"
+DEFMT_LOG = "info"
 
 [target.thumbv6m-none-eabi]
 linker = "flip-link"

@@ -1,8 +1,8 @@
 use proc_macro::TokenStream;
 
 use qubit_config::general::Processor;
-use quote::quote;
-use syn::{ItemStruct, Visibility, parse_macro_input};
+use quote::{ToTokens, format_ident, quote};
+use syn::{ExprArray, ItemStruct, Visibility, parse_macro_input};
 
 mod attributes;
 mod fields;
@@ -67,9 +67,12 @@ pub fn keyboard_matrix_macro(args: TokenStream, item: TokenStream) -> TokenStrea
 		}
 	};
 
+	let macro_def = macro_rules_def(&rows, &cols, processor);
+
 	quote! {
 		#struct_definition
 		#struct_impl
+		#macro_def
 	}
 	.into()
 }
@@ -96,13 +99,23 @@ fn def_pressed_keys_method(
 		Processor::RP2040 => {
 			quote! { use ::embedded_hal::digital::{InputPin as _, OutputPin as _}; }
 		}
+		Processor::STM32F411 => quote! {},
+	};
+
+	let has_to_unwrap = match processor {
+		Processor::RP2040 => {
+			quote! { .unwrap() }
+		}
+		Processor::STM32F411 => {
+			quote! {}
+		}
 	};
 
 	// Get the total amount of keys, excluding the empty spaces.
 	let keys_count: usize = keymap.keymap.iter().flatten().filter(|&&x| x != 0).count();
 
 	let delay_call = match processor {
-		Processor::RP2040 => quote! { ::cortex_m::asm::delay(#delay); },
+		Processor::RP2040 | Processor::STM32F411 => quote! { ::cortex_m::asm::delay(#delay); },
 	};
 
 	// Walk the keymap and assign a sequential bit index to each key that's not empty (0x00),
@@ -155,7 +168,7 @@ fn def_pressed_keys_method(
 				let sense_name = get_sense_name(sense_idx);
 
 				quote! {
-					if self.#sense_name.is_low().unwrap() {
+					if self.#sense_name.is_low()#has_to_unwrap {
 						bitmaps[const { #pos / USIZE_BITS }] |= 1 << const { #pos % USIZE_BITS };
 					}
 				}
@@ -176,13 +189,13 @@ fn def_pressed_keys_method(
 			let drive_name = get_drive_name(drive_idx);
 
 			quote! {
-				self.#drive_name.set_low().unwrap();
+				self.#drive_name.set_low()#has_to_unwrap;
 
 				#delay_call
 
 				#(#check_sense_lines)*
 
-				self.#drive_name.set_high().unwrap();
+				self.#drive_name.set_high()#has_to_unwrap;
 			}
 		}
 	});
@@ -201,6 +214,72 @@ fn def_pressed_keys_method(
 			#(#check_tokens)*
 
 			bitmaps
+		}
+	}
+}
+
+fn macro_rules_def(rows: &ExprArray, cols: &ExprArray, processor: Processor) -> proc_macro2::TokenStream {
+	let macro_definition = match processor {
+		Processor::RP2040 | Processor::STM32F411 => {
+			quote! { ($pins:expr) }
+		}
+	};
+
+	let rows_iterator = rows.elems.iter().map(|pin| match processor {
+		Processor::RP2040 => {
+			let num = pin.to_token_stream().to_string();
+
+			let field = format_ident!("gpio{num}");
+
+			quote! { $pins.#field }
+		}
+		Processor::STM32F411 => {
+			let pin_str = pin.to_token_stream().to_string().to_lowercase();
+
+			let mut pin_iter = pin_str.chars();
+
+			let bank_letter = pin_iter.next().expect("Expected bank letter!");
+			let num: String = pin_iter.collect();
+
+			let bank = format_ident!("gpio_{bank_letter}");
+			let field = format_ident!("p{bank_letter}{num}");
+
+			quote! { $pins.#bank.#field }
+		}
+	});
+
+	let cols_iterator = cols.elems.iter().map(|pin| match processor {
+		Processor::RP2040 => {
+			let num = pin.to_token_stream().to_string();
+
+			let field = format_ident!("gpio{num}");
+
+			quote! { $pins.#field }
+		}
+		Processor::STM32F411 => {
+			let pin_str = pin.to_token_stream().to_string().to_lowercase();
+
+			let mut pin_iter = pin_str.chars();
+
+			let bank_letter = pin_iter.next().expect("Expected bank letter!");
+			let num: String = pin_iter.collect();
+
+			let bank = format_ident!("gpio_{bank_letter}");
+			let field = format_ident!("p{bank_letter}{num}");
+
+			quote! { $pins.#bank.#field }
+		}
+	});
+
+	quote! {
+		#[macro_export]
+		macro_rules! setup_keyboard {
+			#macro_definition => {{
+				$crate::codegen::KeyboardMatrix::new(
+					(#(#rows_iterator),*),
+					(#(#cols_iterator),*),
+				)
+			}};
 		}
 	}
 }

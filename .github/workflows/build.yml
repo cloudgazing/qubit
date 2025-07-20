@@ -27,6 +27,7 @@ jobs:
         BUILD_TARGET: [release]
         device:
           - { author: cloudgazing, model: quartz }
+          - { author: cloudgazing, model: obsidian }
         os: [macos-latest, ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -36,14 +37,15 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           components: clippy
+          rustflags: ""
       - name: Install dependencies
         run: cargo install cargo-make flip-link
 
       - name: Prepare device
-        run: cargo make prepare --author ${{ matrix.device.author }} --model ${{ matrix.device.model }}
+        run: cargo make -v prepare --author ${{ matrix.device.author }} --model ${{ matrix.device.model }}
 
       - name: Run clippy
-        run: cargo clippy
+        run: cargo clippy -v
 
       - name: Build device
-        run: cargo build
+        run: cargo build -v

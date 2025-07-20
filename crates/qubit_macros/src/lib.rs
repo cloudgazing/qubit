@@ -4,8 +4,11 @@
 
 use proc_macro::TokenStream;
 
+#[cfg(feature = "all")]
 mod date;
+#[cfg(feature = "import")]
 mod import;
+#[cfg(feature = "all")]
 mod keyboard;
 
 /// This attribute macro generates a struct representing the keyboard's GPIO pin matrix,
@@ -47,6 +50,7 @@ mod keyboard;
 ///
 /// - All pin numbers passed to this macro must be unique.
 /// - The number of bitmaps in the array depends on the ammount of keys and the target's word size.
+#[cfg(feature = "all")]
 #[proc_macro_attribute]
 pub fn keyboard_matrix(args: TokenStream, item: TokenStream) -> TokenStream {
 	keyboard::keyboard_matrix_macro(args, item)
@@ -64,6 +68,7 @@ pub fn keyboard_matrix(args: TokenStream, item: TokenStream) -> TokenStream {
 /// ```
 /// const BUILD_DATE: u16 = date_now_bitmap!();
 /// ```
+#[cfg(feature = "all")]
 #[proc_macro]
 pub fn build_date_bitmap(_input: TokenStream) -> TokenStream {
 	date::build_date_bitmap_macro()
@@ -94,6 +99,7 @@ pub fn build_date_bitmap(_input: TokenStream) -> TokenStream {
 /// ```rust
 /// pub use ::qubit_device::models::cloudgazing::quartz as device;
 /// ```
+#[cfg(feature = "import")]
 #[proc_macro]
 pub fn import_device(input: TokenStream) -> TokenStream {
 	import::import_device_macro(input)
