@@ -3,27 +3,61 @@
 Keyboard firmware with a variety of features, for different microcontrollers.
 
 > [!NOTE]
-> This project is still **work in progress**, those features are still being worked on and currently
-the only chip supported is the RP2040 :).
+> This project is still **work in progress**, those features are still being worked on :).
+>
+> Chips supported:
+>
+> - RP2040
+> - STM32F411
 
-## Firmware
-
-## Requirements
-
-1. [Rust](https://www.rust-lang.org) and `cargo`. The recommended [install method](https://www.rust-lang.org/tools/install) comes with `cargo` out of the box.
-2. `cargo-make`. Run `cargo install cargo-make`.
-3. `flip-link`. Run `cargo install flip-link`.
-4. `elf2uf2-rs`. Run `cargo install --git https://github.com/StripedMonkey/elf2uf2-rs`.
+> [!NOTE]
+> RA version 2025-07-21 has an issue with reading env values from cargo config. This affects the import_device macro
+> used in qubit's build.rs. Use version 2025-07-14 until that issue is fixed.
 
 ## Building the firmware
 
-Instructions are incomplete and need to be rewritten/finished.
+### Requirements
+
+1. **Rust**. The recommended [install method](https://www.rust-lang.org/tools/install) comes with `cargo` out of the box.
+2. Build tools. These can be installed by running `cargo install cargo-make flip-link`.
+
+After installing all the required tools simply run `cargo make build --author <author name> --model <model name>`
+to build for one of the supported devices. (building using a toml configuration file is not yet implemented)
+
+## Flashing
+
+The easiest way to flash the firmware is using a probe. This project uses [probe-rs](https://github.com/probe-rs/probe-rs) to help with that.
+To install with cargo, run `cargo install probe-rs-tools --locked`.
+
+Eg. flashing for STM32F411:
+
+```zsh
+probe-rs run --chip STM32F411CEUx target/thumbv7em-none-eabihf/debug/qubit`
+```
+
+### Flashing without a probe
+
+For RP2040 specifically `elf2uf2-rs` can be used to turn the binary into a UF2 file.
+Run 
+```zsh
+cargo install --git https://github.com/StripedMonkey/elf2uf2-rs
+``` 
+
+to install it and
+
+```zsh
+elf2uf2-rs target/thumbv6m-none-eabi/debug/qubit qubit.uf2
+``` 
+
+to convert it, then drag and drop it on the mounted device.
 
 ## TODO:
 
+- finish writing instructions for building the firmware
+- switch between NKRO and 6KRO at runtime
 - add LED support
-- add N-Key rollover support
-- add support for storing and updating data to non-volatile storage
+- add storage support
+- add support for other components
 - extend support different type of devices
 - other stuff
 

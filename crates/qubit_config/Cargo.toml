@@ -1,6 +1,6 @@
 [package]
 name = "qubit_config"
-version = "0.0.17"
+version = "0.0.175"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -12,6 +12,7 @@ serde = { workspace = true, optional = true }
 toml = { workspace = true, optional = true }
 
 [features]
+build = ["std"]
 default = []
 std = ["semver/serde", "serde", "toml"]
 

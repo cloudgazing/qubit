@@ -18,7 +18,7 @@ mod keyboard;
 ///
 /// The macro takes the following arguments:
 ///
-/// - `processor` *(required)*: The target microcontroller (e.g., `"RP2040"`).
+/// - `mcu` *(required)*: The target microcontroller (e.g., `"RP2040"`).
 /// - `keymap` *(required)*: A 2D array of HID keycodes that defines the layout.
 /// - `rows` *(required)*: An array of GPIO pin numbers used as rows.
 /// - `cols` *(required)*: An array of GPIO pin numbers used as columns.
@@ -31,7 +31,7 @@ mod keyboard;
 ///
 /// ```
 /// #[qubit_macros::keyboard_pin_matrix(
-///     processor = "RP2040",
+///     mcu = "RP2040",
 ///     keymap = [[41, 30, 31], [20, 4, 5]],
 ///     rows = [2, 3],
 ///     cols = [0, 1, 4]

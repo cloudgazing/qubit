@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use qubit_config::general::Processor;
+use qubit_config::mcu::Mcu;
 use syn::spanned::Spanned;
 use syn::{Expr, ExprArray, Ident, Lit, LitInt, LitStr, Token};
 
@@ -81,7 +81,7 @@ impl KeymapExpr {
 #[derive(Debug)]
 pub struct Attributes {
 	pub delay: u32,
-	pub processor: Processor,
+	pub mcu: Mcu,
 	pub rows: ExprArray,
 	pub cols: ExprArray,
 	pub keymap: KeymapExpr,
@@ -91,7 +91,7 @@ pub struct Attributes {
 impl syn::parse::Parse for Attributes {
 	fn parse(stream: syn::parse::ParseStream) -> Result<Self, syn::Error> {
 		let mut delay: Option<u32> = None;
-		let mut processor: Option<Processor> = None;
+		let mut mcu: Option<Mcu> = None;
 		let mut rows: Option<ExprArray> = None;
 		let mut cols: Option<ExprArray> = None;
 		let mut keymap: Option<KeymapExpr> = None;
@@ -112,16 +112,16 @@ impl syn::parse::Parse for Attributes {
 
 					delay = Some(value.base10_parse()?);
 				}
-				"processor" => {
-					if processor.is_some() {
-						return Err(syn::Error::new(key.span(), "Keyword argument repeated: `processor`."));
+				"mcu" => {
+					if mcu.is_some() {
+						return Err(syn::Error::new(key.span(), "Keyword argument repeated: `mcu`."));
 					}
 
 					let lit: LitStr = stream.parse()?;
-					let value = Processor::from_str(&lit.value())
-						.map_err(|()| syn::Error::new(lit.span(), "Unsupported processor."))?;
+					let value =
+						Mcu::from_str(&lit.value()).map_err(|_| syn::Error::new(lit.span(), "Unsupported mcu."))?;
 
-					processor = Some(value);
+					mcu = Some(value);
 				}
 				"rows" => {
 					if rows.is_some() {
@@ -170,7 +170,7 @@ impl syn::parse::Parse for Attributes {
 		}
 
 		let delay = delay.unwrap_or(40);
-		let processor = processor.ok_or(syn::Error::new(stream.span(), "Missing `processor` argument."))?;
+		let mcu = mcu.ok_or(syn::Error::new(stream.span(), "Missing `mcu` argument."))?;
 		let rows = rows.ok_or(syn::Error::new(stream.span(), "Missing `rows` argument."))?;
 		let cols = cols.ok_or(syn::Error::new(stream.span(), "Missing `cols` argument."))?;
 		let keymap = keymap.ok_or(syn::Error::new(stream.span(), "Missing `keymap` argument."))?;
@@ -178,7 +178,7 @@ impl syn::parse::Parse for Attributes {
 
 		Ok(Self {
 			delay,
-			processor,
+			mcu,
 			rows,
 			cols,
 			keymap,

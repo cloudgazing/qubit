@@ -1,5 +1,7 @@
 pub mod keycodes;
 
+pub type PackedKeymap<const S: usize> = [u8; S];
+
 pub struct Keymap<const R: usize, const C: usize>(pub [[u8; C]; R]);
 
 impl<const R: usize, const C: usize> Keymap<R, C> {
@@ -39,7 +41,7 @@ impl<const R: usize, const C: usize> Keymap<R, C> {
 	///
 	/// Panics if there is a logical error and the length assertion fails.
 	#[must_use]
-	pub const fn get_packed<const S: usize>(&self) -> [u8; S] {
+	pub const fn get_packed<const S: usize>(&self) -> PackedKeymap<S> {
 		let keymap = &self.0;
 
 		let mut packed_keymap = [0; S];
@@ -72,8 +74,6 @@ impl<const R: usize, const C: usize> Keymap<R, C> {
 	}
 }
 
-pub type PackedKeymap<const S: usize> = [u8; S];
-
 #[derive(Debug)]
 pub struct Keymaps<const S: usize> {
 	pub keymap_0: PackedKeymap<S>,
@@ -88,17 +88,21 @@ pub struct KeyboardConfiguration<const S: usize> {
 	pub keymaps: Keymaps<S>,
 }
 
-/// Generate a keymap row using the predefined keycodes.
+/// Generate a keymap using the predefined keycodes.
 /// The literal '-' can be passed to represent an empty space.
 #[macro_export]
-macro_rules! keymap_row {
-	($($key:tt),* $(,)?) => {
-		[
-			$( keymap_row!(@internal $key) ),*
-		]
+macro_rules! keymap {
+	($( [ $($key:tt),* $(,)? ] ),* $(,)?) => {
+		$crate::keyboard::Keymap::new([
+			$(
+				[
+					$( $crate::keymap!(@internal $key) ),*
+				]
+			),*
+		])
 	};
 	(@internal -) => { 0 };
-	(@internal $key:ident) => {
+	(@internal $key:ident) => {{
 		::core::num::NonZeroU8::get($crate::keyboard::keycodes::$key)
-	};
+	}};
 }

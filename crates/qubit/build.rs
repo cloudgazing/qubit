@@ -5,27 +5,18 @@ use std::io::{BufWriter, Write};
 use std::path::PathBuf;
 
 use proc_macro2::TokenStream;
-use qubit_config::general::{Device, Processor};
+use qubit_config::cargo::BuildCfgs;
+use qubit_config::general::Device;
 use qubit_config::linker::output_linker_script;
 use quote::quote;
 
-// #[cfg(device = "supported")]
+// TODO: RA doesn't seem to work with `target-applies-to-host` option in config.toml
+// even though it builds just fine with cargo.
+// #[cfg(device = "import")]
 qubit_macros::import_device!(QUBIT_AUTHOR, QUBIT_MODEL);
 
-fn check_exclusive_pins() {
-	if let Some(led_pin) = device::LED_PIN {
-		assert!(!device::ROW_PINS.contains(&led_pin), "Pin used in more than one place.");
-		assert!(!device::COL_PINS.contains(&led_pin), "Pin used in more than one place.");
-	}
-
-	assert!(
-		!device::ROW_PINS.iter().any(|x| device::COL_PINS.contains(x)),
-		"Pin used in more than one place."
-	);
-}
-
 fn keyboard_tokens() -> TokenStream {
-	let processor = device::PROCESSOR.as_str();
+	let mcu = device::MCU.as_str();
 
 	let keymap = device::LAYER0.0.iter().map(|row| {
 		let row_tokens = row.iter().map(|&n| proc_macro2::Literal::u8_unsuffixed(n));
@@ -46,7 +37,7 @@ fn keyboard_tokens() -> TokenStream {
 	quote! {
 		#[derive(Debug)]
 		#[::qubit_macros::keyboard_matrix(
-			processor = #processor,
+			mcu = #mcu,
 			keymap = [#(#keymap),*],
 			rows = [#(#rows),*],
 			cols = [#(#cols),*]
@@ -82,39 +73,23 @@ fn codegen(file: &mut BufWriter<File>) {
 	file.write_all(formatted.as_bytes()).unwrap();
 }
 
-fn processor_cfgs(p: Processor) {
-	match p {
-		Processor::RP2040 => {}
-		Processor::STM32F411 => {
-			println!("cargo::rustc-cfg=stm32f411_bank_b");
-
-			println!("cargo::rustc-check-cfg=cfg(stm32f411_bank_b)");
-			println!("cargo::rustc-check-cfg=cfg(stm32f411_bank_c)");
-			println!("cargo::rustc-check-cfg=cfg(stm32f411_bank_d)");
-			println!("cargo::rustc-check-cfg=cfg(stm32f411_bank_e)");
-			println!("cargo::rustc-check-cfg=cfg(stm32f411_bank_h)");
-		}
-	}
-}
-
 fn main() {
 	let out = std::env::var_os("OUT_DIR").unwrap();
 	let out = PathBuf::from(out);
 
-	check_exclusive_pins();
-
 	let mut codegen_file = File::create_buffered(out.join("codegen.rs")).unwrap();
 	codegen(&mut codegen_file);
 
-	let processor = device::PROCESSOR;
+	let mcu = device::MCU;
+	let device_type = device::DEVICE;
 
 	let memory_x = {
 		const KEYMAP_SIZE: usize = device::LAYER0.get_packed_size();
 
 		output_linker_script::<qubit_config::keyboard::KeyboardConfiguration<KEYMAP_SIZE>>(
-			processor,
+			mcu,
 			device::FLASH,
-			device::DEVICE,
+			device_type,
 		)
 	};
 
@@ -131,17 +106,27 @@ fn main() {
 		println!("cargo:rustc-link-arg-bins=-Tdefmt.x");
 	}
 
-	match device::DEVICE {
+	let mut build_cfgs = BuildCfgs::new();
+
+	match device_type {
 		Device::Keyboard => {
-			println!("cargo::rustc-cfg=keyboard");
+			build_cfgs.check_cfg("keyboard");
+			build_cfgs.enable_cfg("keyboard");
+
+			build_cfgs.check_keyboard_mcu_cfg();
+
+			qubit_config::cargo::output_cargo_instructions(
+				mcu,
+				&device::ROW_PINS,
+				&device::COL_PINS,
+				device::LED_PIN,
+				&mut build_cfgs,
+			);
 		}
 	}
 
-	processor_cfgs(processor);
-
+	build_cfgs.check_cfg("has_led");
 	if device::LED_PIN.is_some() {
-		println!("cargo::rustc-cfg=has_led");
+		build_cfgs.enable_cfg("has_led");
 	}
-
-	println!("cargo::rustc-check-cfg=cfg(has_led)");
 }

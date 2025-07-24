@@ -2,20 +2,12 @@ use core::mem::MaybeUninit;
 
 use usb_device::device::{StringDescriptors, UsbDevice, UsbDeviceBuilder, UsbVidPid};
 
-use qubit_config::general::Device;
-
 use crate::DEVICE_CONFIG;
-use crate::codegen::{KeyboardMatrix, USB_PID, USB_VID};
+use crate::codegen::{KeyboardMatrix, USB};
 use crate::setup::{UsbBus, UsbBusAllocator};
 
 #[cfg(keyboard)]
 mod keyboard;
-
-const DEVICE_CLASS: u8 = {
-	match DEVICE_CONFIG.device {
-		Device::Keyboard => 0x00,
-	}
-};
 
 // USB singletons.
 static mut USB_BUS_ALLOC: MaybeUninit<UsbBusAllocator> = MaybeUninit::uninit();
@@ -44,7 +36,7 @@ impl QubitDevice {
 			unsafe { (*ptr).write(bus_alloc) }
 		};
 
-		let vid_pid = UsbVidPid(USB_VID, USB_PID);
+		let vid_pid = UsbVidPid(USB.vid, USB.pid);
 		let descriptors = StringDescriptors::default()
 			.manufacturer(DEVICE_CONFIG.author)
 			.product(DEVICE_CONFIG.name);
@@ -64,7 +56,10 @@ impl QubitDevice {
 			// giving it one.
 			let device_builder = unsafe { builder_res.unwrap_unchecked() };
 
-			device_builder.device_class(DEVICE_CLASS).composite_with_iads().build()
+			device_builder
+				.device_class(DEVICE_CONFIG.device.usb_class())
+				.composite_with_iads()
+				.build()
 		};
 
 		{

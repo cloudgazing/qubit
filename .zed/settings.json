@@ -6,12 +6,13 @@
 	"lsp": {
 		"rust-analyzer": {
 			"initialization_options": {
-				// "cargo": {
-				// 	"target": "thumbv6m-none-eabi"
-				// },
 				"check": {
 					"allTargets": false
 				}
+			},
+			"binary": {
+				"path": "/Users/cloudgazing/tmp/rust-analyzer-aarch64-apple-darwin",
+				"arguments": ["--no-log-buffering"]
 			}
 		}
 	}
