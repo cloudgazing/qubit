@@ -1,6 +1,6 @@
 [package]
 name = "qubit"
-version = "0.0.17"
+version = "0.0.175"
 authors.workspace = true
 edition.workspace = true
 description = "Qubit Firmware."
@@ -24,7 +24,7 @@ usbd-hid.workspace = true
 [build-dependencies]
 prettyplease.workspace = true
 proc-macro2.workspace = true
-qubit_config = { workspace = true, features = ["std"] }
+qubit_config = { workspace = true, features = ["build"] }
 qubit_device = { workspace = true, features = ["std"] }
 qubit_macros.workspace = true
 quote.workspace = true

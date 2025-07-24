@@ -611,9 +611,9 @@ checksum = "439ee305def115ba05938db6eb1644ff94165c5ab5e9420d1c1bcedbba909391"
 
 [[package]]
 name = "prettyplease"
-version = "0.2.35"
+version = "0.2.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "061c1221631e079b26479d25bbf2275bfe5917ae8419cd7e34f13bfc2aa7539a"
+checksum = "ff24dfcda44452b9816fff4cd4227e1bb73ff5a2f1bc1105aa92fb8565ce44d2"
 dependencies = [
  "proc-macro2",
  "syn 2.0.104",
@@ -652,7 +652,7 @@ dependencies = [
 
 [[package]]
 name = "qubit"
-version = "0.0.17"
+version = "0.0.175"
 dependencies = [
  "constcat",
  "cortex-m",
@@ -679,7 +679,7 @@ dependencies = [
 
 [[package]]
 name = "qubit_config"
-version = "0.0.17"
+version = "0.0.175"
 dependencies = [
  "semver 1.0.26",
  "serde",
@@ -688,14 +688,14 @@ dependencies = [
 
 [[package]]
 name = "qubit_device"
-version = "0.0.17"
+version = "0.0.175"
 dependencies = [
  "qubit_config",
 ]
 
 [[package]]
 name = "qubit_macros"
-version = "0.0.17"
+version = "0.0.175"
 dependencies = [
  "chrono",
  "proc-macro2",

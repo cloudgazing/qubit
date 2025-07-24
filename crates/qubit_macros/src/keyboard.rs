@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 
-use qubit_config::general::Processor;
+use qubit_config::mcu::Mcu;
 use quote::{ToTokens, format_ident, quote};
 use syn::{ExprArray, ItemStruct, Visibility, parse_macro_input};
 
@@ -20,15 +20,15 @@ pub fn keyboard_matrix_macro(args: TokenStream, item: TokenStream) -> TokenStrea
 	let struct_name = input.ident;
 
 	let delay = attrs.delay;
-	let processor = attrs.processor;
+	let mcu = attrs.mcu;
 	let rows = attrs.rows;
 	let cols = attrs.cols;
 	let keymap = attrs.keymap;
 	let direction = attrs.direction;
 
 	let struct_definition = {
-		let row_fields = fields::map_row_fields(processor, &direction, &rows);
-		let col_fields = fields::map_col_fields(processor, &direction, &cols);
+		let row_fields = fields::map_row_fields(mcu, &direction, &rows);
+		let col_fields = fields::map_col_fields(mcu, &direction, &cols);
 
 		quote! {
 			#visibility struct #struct_name {
@@ -40,11 +40,11 @@ pub fn keyboard_matrix_macro(args: TokenStream, item: TokenStream) -> TokenStrea
 
 	let struct_impl = {
 		let new_method = {
-			let row_args = fields::map_new_args(processor, &rows);
-			let col_args = fields::map_new_args(processor, &cols);
+			let row_args = fields::map_new_args(mcu, &rows);
+			let col_args = fields::map_new_args(mcu, &cols);
 
-			let row_fields = fields::map_rows_new(processor, &direction, &rows);
-			let col_fields = fields::map_cols_new(processor, &direction, &cols);
+			let row_fields = fields::map_rows_new(mcu, &direction, &rows);
+			let col_fields = fields::map_cols_new(mcu, &direction, &cols);
 
 			quote! {
 				#[must_use]
@@ -57,7 +57,7 @@ pub fn keyboard_matrix_macro(args: TokenStream, item: TokenStream) -> TokenStrea
 			}
 		};
 
-		let pressed_keys_method = def_pressed_keys_method(delay, processor, &keymap, &direction, &visibility);
+		let pressed_keys_method = def_pressed_keys_method(delay, mcu, &keymap, &direction, &visibility);
 
 		quote! {
 			impl #struct_name {
@@ -67,7 +67,7 @@ pub fn keyboard_matrix_macro(args: TokenStream, item: TokenStream) -> TokenStrea
 		}
 	};
 
-	let macro_def = macro_rules_def(&rows, &cols, processor);
+	let macro_def = macro_rules_def(&rows, &cols, mcu);
 
 	quote! {
 		#struct_definition
@@ -89,24 +89,24 @@ pub fn keyboard_matrix_macro(args: TokenStream, item: TokenStream) -> TokenStrea
 /// at that matrix position.
 fn def_pressed_keys_method(
 	delay: u32,
-	processor: Processor,
+	mcu: Mcu,
 	keymap: &KeymapExpr,
 	direction: &Direction,
 	visibility: &Visibility,
 ) -> proc_macro2::TokenStream {
 	// Bring in scope the traits needed.
-	let imports = match processor {
-		Processor::RP2040 => {
+	let imports = match mcu {
+		Mcu::RP2040 => {
 			quote! { use ::embedded_hal::digital::{InputPin as _, OutputPin as _}; }
 		}
-		Processor::STM32F411 => quote! {},
+		Mcu::STM32F411 => quote! {},
 	};
 
-	let has_to_unwrap = match processor {
-		Processor::RP2040 => {
+	let has_to_unwrap = match mcu {
+		Mcu::RP2040 => {
 			quote! { .unwrap() }
 		}
-		Processor::STM32F411 => {
+		Mcu::STM32F411 => {
 			quote! {}
 		}
 	};
@@ -114,8 +114,8 @@ fn def_pressed_keys_method(
 	// Get the total amount of keys, excluding the empty spaces.
 	let keys_count: usize = keymap.keymap.iter().flatten().filter(|&&x| x != 0).count();
 
-	let delay_call = match processor {
-		Processor::RP2040 | Processor::STM32F411 => quote! { ::cortex_m::asm::delay(#delay); },
+	let delay_call = match mcu {
+		Mcu::RP2040 | Mcu::STM32F411 => quote! { ::cortex_m::asm::delay(#delay); },
 	};
 
 	// Walk the keymap and assign a sequential bit index to each key that's not empty (0x00),
@@ -218,22 +218,22 @@ fn def_pressed_keys_method(
 	}
 }
 
-fn macro_rules_def(rows: &ExprArray, cols: &ExprArray, processor: Processor) -> proc_macro2::TokenStream {
-	let macro_definition = match processor {
-		Processor::RP2040 | Processor::STM32F411 => {
+fn macro_rules_def(rows: &ExprArray, cols: &ExprArray, mcu: Mcu) -> proc_macro2::TokenStream {
+	let macro_definition = match mcu {
+		Mcu::RP2040 | Mcu::STM32F411 => {
 			quote! { ($pins:expr) }
 		}
 	};
 
-	let rows_iterator = rows.elems.iter().map(|pin| match processor {
-		Processor::RP2040 => {
+	let rows_iterator = rows.elems.iter().map(|pin| match mcu {
+		Mcu::RP2040 => {
 			let num = pin.to_token_stream().to_string();
 
 			let field = format_ident!("gpio{num}");
 
 			quote! { $pins.#field }
 		}
-		Processor::STM32F411 => {
+		Mcu::STM32F411 => {
 			let pin_str = pin.to_token_stream().to_string().to_lowercase();
 
 			let mut pin_iter = pin_str.chars();
@@ -248,15 +248,15 @@ fn macro_rules_def(rows: &ExprArray, cols: &ExprArray, processor: Processor) -> 
 		}
 	});
 
-	let cols_iterator = cols.elems.iter().map(|pin| match processor {
-		Processor::RP2040 => {
+	let cols_iterator = cols.elems.iter().map(|pin| match mcu {
+		Mcu::RP2040 => {
 			let num = pin.to_token_stream().to_string();
 
 			let field = format_ident!("gpio{num}");
 
 			quote! { $pins.#field }
 		}
-		Processor::STM32F411 => {
+		Mcu::STM32F411 => {
 			let pin_str = pin.to_token_stream().to_string().to_lowercase();
 
 			let mut pin_iter = pin_str.chars();

@@ -1,6 +1,6 @@
 [package]
 name = "qubit_macros"
-version = "0.0.17"
+version = "0.0.175"
 authors.workspace = true
 edition.workspace = true
 description = "Macros for Qubit."

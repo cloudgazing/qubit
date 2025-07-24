@@ -15,9 +15,8 @@ fn main() {
 	let author = env!("AUTHOR");
 	let model = env!("MODEL");
 
-	let target_triple = device::PROCESSOR.target_triple();
-
-	let mcu = device::PROCESSOR.as_str().to_lowercase();
+	let target_triple = device::MCU.target_triple();
+	let mcu = device::MCU.as_cfg_str();
 
 	let extension = format!(
 		r#"

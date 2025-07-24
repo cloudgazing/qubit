@@ -6,7 +6,8 @@ mod raw {
 	use semver::Version;
 	use serde::{Deserialize, Serialize};
 
-	use crate::general::{Device, Processor};
+	use crate::general::Device;
+	use crate::mcu::Mcu;
 
 	#[derive(Debug, Deserialize, Serialize)]
 	pub struct Firmware {
@@ -31,7 +32,7 @@ mod raw {
 
 	#[derive(Debug, Deserialize, Serialize)]
 	pub struct Keyboard {
-		pub processor: Processor,
+		pub mcu: Mcu,
 		pub keymap: Keymap,
 	}
 
@@ -45,7 +46,7 @@ mod raw {
 }
 
 mod keyboard {
-	use crate::general::Processor;
+	use crate::mcu::Mcu;
 
 	#[derive(Debug)]
 	pub struct Keymap {
@@ -61,7 +62,7 @@ mod keyboard {
 
 	#[derive(Debug)]
 	pub struct KeyboardConfig {
-		pub processor: Processor,
+		pub mcu: Mcu,
 		pub keymap: Keymap,
 	}
 }
@@ -108,7 +109,7 @@ impl<'de> Deserialize<'de> for TomlConfiguration {
 			return Err(de::Error::custom("Patch version out of supported bounds."));
 		};
 
-		let version = super::general::Version::new(super::general::Api::V0, major, minor, patch);
+		let version = crate::version::Version::new(crate::version::Api::V0, major, minor, patch);
 
 		// Check if the rows and cols size match
 		let rows_count = raw_config.keyboard.keymap.rows;
@@ -178,7 +179,7 @@ impl<'de> Deserialize<'de> for TomlConfiguration {
 		};
 
 		let keyboard_config = keyboard::KeyboardConfig {
-			processor: raw_config.keyboard.processor,
+			mcu: raw_config.keyboard.mcu,
 			keymap,
 		};
 
