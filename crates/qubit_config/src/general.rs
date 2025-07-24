@@ -7,6 +7,15 @@ pub enum Device {
 	Keyboard,
 }
 
+impl Device {
+	#[must_use]
+	pub fn region_name(self) -> &'static str {
+		match self {
+			Self::Keyboard => "KEYBOARD",
+		}
+	}
+}
+
 #[derive(Debug)]
 pub enum Api {
 	V0,
@@ -75,6 +84,7 @@ impl Version {
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 pub enum Processor {
 	RP2040,
+	STM32F411,
 }
 
 impl FromStr for Processor {
@@ -83,6 +93,7 @@ impl FromStr for Processor {
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
 		match s {
 			"RP2040" => Ok(Self::RP2040),
+			"STM32F411" => Ok(Self::STM32F411),
 			_ => Err(()),
 		}
 	}
@@ -93,6 +104,7 @@ impl Processor {
 	pub const fn as_str(&self) -> &'static str {
 		match self {
 			Self::RP2040 => "RP2040",
+			Self::STM32F411 => "STM32F411",
 		}
 	}
 
@@ -100,6 +112,7 @@ impl Processor {
 	pub const fn target_triple(&self) -> &'static str {
 		match self {
 			Self::RP2040 => "thumbv6m-none-eabi",
+			Self::STM32F411 => "thumbv7em-none-eabihf",
 		}
 	}
 }

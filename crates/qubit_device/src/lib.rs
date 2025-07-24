@@ -1,5 +1,6 @@
 //! A crate that holds the configurations for all the **officially supported** devices.
 
+// #![warn(missing_docs)]
 #![feature(strict_overflow_ops)]
 #![cfg_attr(not(feature = "std"), no_std)]
 

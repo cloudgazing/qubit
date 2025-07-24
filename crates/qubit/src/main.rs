@@ -5,24 +5,29 @@
 #![no_std]
 #![no_main]
 
-// Imports used just for linking
+#[cfg(feature = "defmt")]
 use defmt as _;
+#[cfg(feature = "defmt")]
 use defmt_rtt as _;
+
 use panic_probe as _;
 
-use embedded_hal::digital::OutputPin;
 use qubit_config::general::Configuration;
-use usb_device::bus::UsbBusAllocator;
 
 mod setup;
+#[cfg(mcu = "rp2040")]
 mod time;
 mod usb;
 
 mod codegen {
 	include!(concat!(env!("OUT_DIR"), "/codegen.rs"));
-}
 
-use setup::hal::pac::interrupt;
+	#[allow(
+		clippy::single_component_path_imports,
+		reason = "The pub export is required to access this macro from other modules."
+	)]
+	pub(crate) use setup_keyboard;
+}
 
 #[used]
 #[unsafe(link_section = ".configuration")]
@@ -34,59 +39,24 @@ static DEVICE_CONFIG: Configuration = Configuration {
 };
 
 /// The main entry point for the program.
-#[setup::hal::entry]
+#[setup::entry]
 fn main() -> ! {
-	let mut peripherals = setup::take_peripherals().unwrap();
-
-	let (clocks, timer, pins) = setup_hw!(peripherals);
-
-	// Use this LED to check for errors during setup.
-	let mut led_pin = pins.gpio25.into_push_pull_output();
-	led_pin.set_high().unwrap();
-	// -- --
-
-	// #[cfg(feature = "keyboard")]
-	let kb_matrix = setup_keyboard!(pins);
-
-	let usb_bus = ::rp2040_hal::usb::UsbBus::new(
-		peripherals.USBCTRL_REGS,
-		peripherals.USBCTRL_DPRAM,
-		clocks.usb_clock,
-		true,
-		&mut peripherals.RESETS,
-	);
-
-	let usb_alloc = UsbBusAllocator::new(usb_bus);
-
-	// SAFETY: We initialize the USB device before enabling the interrupt.
-	let mut qubit_usb_device = unsafe { usb::QubitDevice::new(usb_alloc, kb_matrix) };
+	// SAFETY: This function is called once, initializing the USB device and other statics
+	// before enabling the interrupt.
+	let (mut qubit_usb_device, mut countdown) = unsafe { setup::initialize_mcu() };
 
 	// SAFETY: The values this function has access to have been initialized above. It is safe
 	// to enable the interrupt.
 	unsafe {
-		setup::hal::pac::NVIC::unmask(setup::hal::pac::Interrupt::USBCTRL_IRQ);
+		setup::enable_interrupt();
 	}
 
-	let mut count_down = time::CountDown::new(timer);
-	count_down.start(setup::hal::fugit::MicrosDurationU64::millis(10));
-
-	// -- --
-	led_pin.set_low().unwrap();
-	// -- --
+	setup::start_countdown(&mut countdown);
 
 	loop {
-		if count_down.wait().is_ok() {
-			// #[cfg(feature = "keyboard")]
+		if countdown.wait().is_ok() {
+			#[cfg(keyboard)]
 			qubit_usb_device.keyboard.send_pressed_keys();
 		}
-	}
-}
-
-/// Poll the USB for new events.
-#[interrupt]
-fn USBCTRL_IRQ() {
-	// SAFETY: The function is called inside an interrupt context and after initialization.
-	unsafe {
-		usb::poll_device();
 	}
 }

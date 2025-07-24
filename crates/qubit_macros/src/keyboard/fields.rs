@@ -1,9 +1,21 @@
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use qubit_config::general::Processor;
 use quote::{ToTokens, format_ident, quote};
-use syn::{Expr, ExprArray, Ident};
+use syn::{Expr, ExprArray, Ident, LitChar, LitInt};
 
 use super::attributes::Direction;
+
+fn split_stm32_def(pin: &TokenStream) -> (LitChar, LitInt) {
+	let ident_str = pin.to_string();
+	let ident_str = ident_str.trim();
+
+	let (port, number) = ident_str.split_at(1);
+
+	let port_char = LitChar::new(port.chars().next().unwrap(), Span::call_site());
+	let pin_number = LitInt::new(number, Span::call_site());
+
+	(port_char, pin_number)
+}
 
 pub fn row_field_name(index: usize) -> Ident {
 	format_ident!("row_{index}")
@@ -14,9 +26,10 @@ pub fn col_field_name(index: usize) -> Ident {
 }
 
 fn input_pin_type(processor: Processor, pin: &Expr) -> TokenStream {
+	let pin = pin.into_token_stream();
+
 	match processor {
 		Processor::RP2040 => {
-			let pin = pin.into_token_stream();
 			let pin_expr = format_ident!("Gpio{}", pin.to_string());
 
 			quote! {
@@ -27,13 +40,25 @@ fn input_pin_type(processor: Processor, pin: &Expr) -> TokenStream {
 				>
 			}
 		}
+		Processor::STM32F411 => {
+			let (port_char, pin_number) = split_stm32_def(&pin);
+
+			quote! {
+				::stm32f4xx_hal::gpio::Pin<
+					#port_char,
+					#pin_number,
+					::stm32f4xx_hal::gpio::Input
+				>
+			}
+		}
 	}
 }
 
 fn output_pin_type(processor: Processor, pin: &Expr) -> TokenStream {
+	let pin = pin.into_token_stream();
+
 	match processor {
 		Processor::RP2040 => {
-			let pin = pin.into_token_stream();
 			let pin_expr = format_ident!("Gpio{}", pin.to_string());
 
 			quote! {
@@ -44,12 +69,23 @@ fn output_pin_type(processor: Processor, pin: &Expr) -> TokenStream {
 				>
 			}
 		}
+		Processor::STM32F411 => {
+			let (port_char, pin_number) = split_stm32_def(&pin);
+
+			quote! {
+				::stm32f4xx_hal::gpio::Pin<
+					#port_char,
+					#pin_number,
+					::stm32f4xx_hal::gpio::Output
+				>
+			}
+		}
 	}
 }
 
 fn into_input_method(processor: Processor) -> TokenStream {
 	match processor {
-		Processor::RP2040 => {
+		Processor::RP2040 | Processor::STM32F411 => {
 			quote! { into_pull_up_input() }
 		}
 	}
@@ -58,24 +94,34 @@ fn into_input_method(processor: Processor) -> TokenStream {
 fn into_output_method(processor: Processor) -> TokenStream {
 	match processor {
 		Processor::RP2040 => {
-			quote! { into_push_pull_output_in_state(::rp2040_hal::gpio::PinState::High) }
+			quote! { into_push_pull_output_in_state(::embedded_hal::digital::PinState::High) }
+		}
+		Processor::STM32F411 => {
+			quote! { into_push_pull_output_in_state(::stm32f4xx_hal::gpio::PinState::High) }
 		}
 	}
 }
 
 pub fn map_new_args(processor: Processor, arr: &ExprArray) -> TokenStream {
-	let pins = arr.elems.iter().map(|pin| match processor {
-		Processor::RP2040 => {
-			let pin = pin.to_token_stream();
+	let pins = arr.elems.iter().map(|pin| {
+		let pin = pin.to_token_stream();
 
-			let pin = format_ident!("Gpio{}", pin.to_string());
+		match processor {
+			Processor::RP2040 => {
+				let pin = format_ident!("Gpio{}", pin.to_string());
 
-			quote! {
-				::rp2040_hal::gpio::Pin<
-					::rp2040_hal::gpio::bank0::#pin,
-					::rp2040_hal::gpio::FunctionNull,
-					::rp2040_hal::gpio::PullDown,
-				>
+				quote! {
+					::rp2040_hal::gpio::Pin<
+						::rp2040_hal::gpio::bank0::#pin,
+						::rp2040_hal::gpio::FunctionNull,
+						::rp2040_hal::gpio::PullDown,
+					>
+				}
+			}
+			Processor::STM32F411 => {
+				let (port_char, pin_number) = split_stm32_def(&pin);
+
+				quote! { ::stm32f4xx_hal::gpio::Pin<#port_char, #pin_number> }
 			}
 		}
 	});
@@ -128,16 +174,12 @@ pub fn map_rows_new(processor: Processor, direction: &Direction, rows: &ExprArra
 		let name = row_field_name(i);
 		let index = syn::Index::from(i);
 
-		match processor {
-			Processor::RP2040 => {
-				let method = match direction {
-					Direction::RowCol => into_input_method(processor),
-					Direction::ColRow => into_output_method(processor),
-				};
+		let method = match direction {
+			Direction::RowCol => into_input_method(processor),
+			Direction::ColRow => into_output_method(processor),
+		};
 
-				quote! { #name: rows.#index.#method }
-			}
-		}
+		quote! { #name: rows.#index.#method }
 	});
 
 	quote! { #(#map,)* }
@@ -148,16 +190,12 @@ pub fn map_cols_new(processor: Processor, direction: &Direction, cols: &ExprArra
 		let name = col_field_name(i);
 		let index = syn::Index::from(i);
 
-		match processor {
-			Processor::RP2040 => {
-				let method = match direction {
-					Direction::RowCol => into_output_method(processor),
-					Direction::ColRow => into_input_method(processor),
-				};
+		let method = match direction {
+			Direction::RowCol => into_output_method(processor),
+			Direction::ColRow => into_input_method(processor),
+		};
 
-				quote! { #name: cols.#index.#method }
-			}
-		}
+		quote! { #name: cols.#index.#method }
 	});
 
 	quote! { #(#map,)* }

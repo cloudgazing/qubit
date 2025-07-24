@@ -1,10 +1,13 @@
 use core::mem::MaybeUninit;
 
+use qubit_config::keyboard::keycodes::{
+	KM_LALT, KM_LCTRL, KM_LMETA, KM_LSHIFT, KM_RALT, KM_RCTRL, KM_RMETA, KM_RSHIFT,
+};
 use usb_device::bus::UsbBusAllocator;
 use usbd_hid::hid_class::{HIDClass, HidClassSettings, HidCountryCode, HidProtocol, HidSubClass, ProtocolModeConfig};
 
 use crate::codegen::KeyboardMatrix;
-use crate::setup::hal::usb::UsbBus;
+use crate::setup::UsbBus;
 
 mod descriptor;
 mod keymaps;
@@ -40,7 +43,9 @@ static mut HID_CLASS: MaybeUninit<HIDClass<'static, UsbBus>> = MaybeUninit::unin
 
 #[derive(Debug)]
 pub struct KeyboardInstance {
-	prev_report: report::Keyboard6kroReport,
+	is_nkro: bool,
+	prev_nkro_report: report::KeyboardNkroReport,
+	prev_6kro_report: report::Keyboard6kroReport,
 	matrix: KeyboardMatrix,
 }
 
@@ -62,7 +67,17 @@ impl KeyboardInstance {
 			locale: HidCountryCode::US,
 		};
 
-		let hid_class = HIDClass::new_with_settings(usb_bus_alloc, descriptor::REPORT_DESCRIPTOR, 1, hid_settings);
+		// TODO: Find a way to switch between boot and report mode.
+
+		let is_nkro = true;
+
+		let report_descriptor = if is_nkro {
+			descriptor::DESCRIPTOR_NKRO
+		} else {
+			descriptor::DESCRIPTOR_6KRO
+		};
+
+		let hid_class = HIDClass::new_with_settings(usb_bus_alloc, report_descriptor, 1, hid_settings);
 
 		let ptr = &raw mut HID_CLASS;
 
@@ -78,7 +93,9 @@ impl KeyboardInstance {
 		}
 
 		Self {
-			prev_report: [0; 9],
+			is_nkro,
+			prev_nkro_report: [0; 34],
+			prev_6kro_report: [0; 9],
 			matrix,
 		}
 	}
@@ -88,38 +105,56 @@ impl KeyboardInstance {
 	pub fn send_pressed_keys(&mut self) {
 		let pressed_keys = self.matrix.get_pressed_keys();
 
-		// SAFETY: The active keymap was initialized before this call.
-		let report = unsafe { report::construct_6kro_report(pressed_keys) };
+		if self.is_nkro {
+			// SAFETY: The active keymap was initialized before this call.
+			let report = unsafe { report::construct_nkro_report(pressed_keys) };
 
-		if report != self.prev_report {
-			cortex_m::interrupt::free(|_| {
-				let hid_class = {
-					let ptr = &raw const HID_CLASS;
+			if report != self.prev_nkro_report {
+				cortex_m::interrupt::free(|_| {
+					let hid_class = {
+						let ptr = &raw const HID_CLASS;
 
-					// SAFETY: This is safe because:
-					//
-					// * The content was fully initialized when this struct was created.
-					// * We access this inside the critical section which prevents two mutable references
-					// to the value from being created.
-					unsafe { (*ptr).assume_init_ref() }
-				};
+						// SAFETY: This is safe because:
+						//
+						// * The content was fully initialized when this struct was created.
+						// * We access this inside the critical section which prevents two mutable references
+						// to the value from being created.
+						unsafe { (*ptr).assume_init_ref() }
+					};
 
-				_ = hid_class.push_raw_input(report.as_ref());
+					_ = hid_class.push_raw_input(report.as_ref());
+				});
 
-				#[cfg(feature = "serial")]
-				{
-					// SAFETY: This is safe because:
-					//
-					// * The caller guarantees the seral static was initialized before calling the `new` method.
-					// * We access this inside the critical section which prevents two mutable references
-					// to the value from being created.
-					let serial_port = unsafe { super::serial::get_mut() };
+				self.prev_nkro_report = report;
 
-					super::serial::write_message(serial_port, b"Sent report");
-				}
-			});
+				#[cfg(feature = "defmt")]
+				report::log_nkro_report(report);
+			}
+		} else {
+			// SAFETY: The active keymap was initialized before this call.
+			let report = unsafe { report::construct_6kro_report(pressed_keys) };
 
-			self.prev_report = report;
+			if report != self.prev_6kro_report {
+				cortex_m::interrupt::free(|_| {
+					let hid_class = {
+						let ptr = &raw const HID_CLASS;
+
+						// SAFETY: This is safe because:
+						//
+						// * The content was fully initialized when this struct was created.
+						// * We access this inside the critical section which prevents two mutable references
+						// to the value from being created.
+						unsafe { (*ptr).assume_init_ref() }
+					};
+
+					_ = hid_class.push_raw_input(report.as_ref());
+				});
+
+				self.prev_6kro_report = report;
+
+				#[cfg(feature = "defmt")]
+				report::log_6kro_report(report);
+			}
 		}
 	}
 }
@@ -140,10 +175,7 @@ pub unsafe fn get_mut<'a>() -> &'a mut HIDClass<'static, UsbBus> {
 	unsafe { (*ptr).assume_init_mut() }
 }
 
-pub fn process_incoming_report(
-	keyboard_hid: &mut HIDClass<UsbBus>,
-	#[cfg(feature = "serial")] serial_port: &mut usbd_serial::SerialPort<UsbBus>,
-) {
+pub fn process_incoming_report(keyboard_hid: &mut HIDClass<UsbBus>) {
 	let mut buf = [0_u8; 64];
 
 	let Ok(rep_size) = keyboard_hid.pull_raw_output(&mut buf) else {
@@ -160,21 +192,12 @@ pub fn process_incoming_report(
 
 			match report_id {
 				descriptor::KB_REP_ID_OUT => {
-					process_led_report(
-						buf[1],
-						#[cfg(feature = "serial")]
-						serial_port,
-					);
+					process_led_report(buf[1]);
 				}
 				silverplate::VEND_REP_ID_OUT => {
 					let vendor_byte = buf[1];
 
-					silverplate::process_vendor_report(
-						keyboard_hid,
-						vendor_byte,
-						#[cfg(feature = "serial")]
-						serial_port,
-					);
+					silverplate::process_vendor_report(keyboard_hid, vendor_byte);
 				}
 				_ => {}
 			}
@@ -185,19 +208,67 @@ pub fn process_incoming_report(
 				return;
 			}
 
-			process_led_report(
-				buf[1],
-				#[cfg(feature = "serial")]
-				serial_port,
-			);
+			process_led_report(buf[1]);
 		}
 	}
 }
 
-fn process_led_report(led_byte: u8, #[cfg(feature = "serial")] serial_port: &mut usbd_serial::SerialPort<UsbBus>) {
-	// Handle LED here.
-	_ = led_byte;
+fn process_led_report(led_byte: u8) {
+	let mut left_ctrl = false;
+	let mut left_shift = false;
+	let mut left_alt = false;
+	let mut left_meta = false;
+	let mut right_ctrl = false;
+	let mut right_shift = false;
+	let mut right_alt = false;
+	let mut right_meta = false;
 
-	#[cfg(feature = "serial")]
-	super::serial::write_message(serial_port, b"Received LED report!!\n".as_ref());
+	let is_left_ctrl = (led_byte & KM_LCTRL.get()) != 0;
+	let is_left_alt = (led_byte & KM_LALT.get()) != 0;
+	let is_left_shift = (led_byte & KM_LSHIFT.get()) != 0;
+	let is_left_meta = (led_byte & KM_LMETA.get()) != 0;
+	let is_right_ctrl = (led_byte & KM_RCTRL.get()) != 0;
+	let is_right_shift = (led_byte & KM_RSHIFT.get()) != 0;
+	let is_right_alt = (led_byte & KM_RALT.get()) != 0;
+	let is_right_meta = (led_byte & KM_RMETA.get()) != 0;
+
+	#[cfg(feature = "defmt")]
+	{
+		if is_left_ctrl == left_ctrl {
+			defmt::info!("Received left CTRL LED report!");
+		}
+		if is_left_shift == left_shift {
+			defmt::info!("Received left SHIFT LED report!");
+		}
+		if is_left_alt == left_alt {
+			defmt::info!("Received left ALT LED report!");
+		}
+		if is_left_meta == left_meta {
+			defmt::info!("Received left META LED report!");
+		}
+		if is_right_ctrl == right_ctrl {
+			defmt::info!("Received right CTRL LED report!");
+		}
+		if is_right_shift == right_shift {
+			defmt::info!("Received right SHIFT LED report!");
+		}
+		if is_right_alt == right_alt {
+			defmt::info!("Received right ALT LED report!");
+		}
+		if is_right_meta == right_meta {
+			defmt::info!("Received right META LED report!");
+		}
+	}
+
+	#[allow(unused_assignments)]
+	{
+		left_ctrl = is_left_ctrl;
+		left_shift = is_left_shift;
+		left_alt = is_left_alt;
+		left_meta = is_left_meta;
+		right_ctrl = is_right_ctrl;
+		right_shift = is_right_shift;
+		right_alt = is_right_alt;
+		right_meta = is_right_meta;
+	}
 }

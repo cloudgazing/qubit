@@ -4,7 +4,7 @@ use usbd_hid::hid_class::HIDClass;
 
 use super::CONFIG;
 use crate::DEVICE_CONFIG;
-use crate::setup::hal::usb::UsbBus;
+use crate::setup::UsbBus;
 
 const BUILD_DATE: u16 = qubit_macros::build_date_bitmap!();
 
@@ -57,22 +57,7 @@ pub const REPORT: &[u8] = &[
 	0x81, 0x00,                // Input(Data, Array, Absolute)
 ];
 
-cfg_select! {
-	feature = "serial" => {
-		pub fn process_vendor_report(hid_class: &HIDClass<UsbBus>, req_byte: u8, serial: &mut usbd_serial::SerialPort<UsbBus>) {
-			internal_process_vendor_report(hid_class, req_byte);
-
-			crate::usb::serial::write_message(serial, b"got some vendor output report data!!\n");
-		}
-	}
-	_ => {
-		pub fn process_vendor_report(hid_class: &HIDClass<UsbBus>, req_byte: u8) {
-			internal_process_vendor_report(hid_class, req_byte);
-		}
-	}
-}
-
-fn internal_process_vendor_report(hid_class: &HIDClass<UsbBus>, req_byte: u8) {
+pub fn process_vendor_report(hid_class: &HIDClass<UsbBus>, req_byte: u8) {
 	// check the "command byte"
 	match req_byte {
 		REQ_GET_FIRMWARE_INFO => {

@@ -1,48 +1,48 @@
 [package]
-description = "Qubit Keyboard Firmware."
 name = "qubit"
-version = "0.0.16"
+version = "0.0.17"
 authors.workspace = true
 edition.workspace = true
+description = "Qubit Firmware."
 license.workspace = true
 publish.workspace = true
 
-[lints]
-workspace = true
-
 [dependencies]
-# Qubit
-qubit_macros.workspace = true
-qubit_device.workspace = true
-qubit_config.workspace = true
-# Workspace
+constcat.workspace = true
 cortex-m.workspace = true
 cortex-m-rt.workspace = true
-defmt.workspace = true
-defmt-rtt.workspace = true
-embedded-hal.workspace = true
+defmt = { workspace = true, optional = true }
+defmt-rtt = { workspace = true, optional = true }
+heapless.workspace = true
 panic-probe.workspace = true
-rp2040-boot2.workspace = true
-rp2040-hal = { workspace = true, features = ["rt", "critical-section-impl"] }
+qubit_config.workspace = true
+qubit_device.workspace = true
+qubit_macros.workspace = true
 usb-device.workspace = true
 usbd-hid.workspace = true
-usbd-serial = { workspace = true, optional = true }
-constcat.workspace = true
 
 [build-dependencies]
-# Qubit
-qubit_macros.workspace = true
+prettyplease.workspace = true
+proc-macro2.workspace = true
 qubit_config = { workspace = true, features = ["std"] }
 qubit_device = { workspace = true, features = ["std"] }
-# Workspace
-syn.workspace = true
+qubit_macros.workspace = true
 quote.workspace = true
-proc-macro2.workspace = true
-# External
-prettyplease = "0.2.35"
+syn.workspace = true
+
+[target.'cfg(mcu = "rp2040")'.dependencies]
+embedded-hal.workspace = true
+rp2040-boot2.workspace = true
+rp2040-hal.workspace = true
+
+[target.'cfg(mcu = "stm32f411")'.dependencies]
+fugit.workspace = true
+stm32f4xx-hal = { workspace = true, features = ["stm32f411"] }
 
 [features]
-default = ["serial", "silverplate", "keyboard"]
-keyboard = []
-serial = ["usbd-serial"]
+default = ["defmt", "silverplate"]
+defmt = ["defmt-rtt", "dep:defmt", "heapless/defmt-03"]
 silverplate = []
+
+[lints]
+workspace = true

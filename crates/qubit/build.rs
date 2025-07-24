@@ -5,11 +5,24 @@ use std::io::{BufWriter, Write};
 use std::path::PathBuf;
 
 use proc_macro2::TokenStream;
+use qubit_config::general::{Device, Processor};
 use qubit_config::linker::output_linker_script;
-use quote::{format_ident, quote};
+use quote::quote;
 
 // #[cfg(device = "supported")]
 qubit_macros::import_device!(QUBIT_AUTHOR, QUBIT_MODEL);
+
+fn check_exclusive_pins() {
+	if let Some(led_pin) = device::LED_PIN {
+		assert!(!device::ROW_PINS.contains(&led_pin), "Pin used in more than one place.");
+		assert!(!device::COL_PINS.contains(&led_pin), "Pin used in more than one place.");
+	}
+
+	assert!(
+		!device::ROW_PINS.iter().any(|x| device::COL_PINS.contains(x)),
+		"Pin used in more than one place."
+	);
+}
 
 fn keyboard_tokens() -> TokenStream {
 	let processor = device::PROCESSOR.as_str();
@@ -22,16 +35,13 @@ fn keyboard_tokens() -> TokenStream {
 
 	let rows: Vec<_> = device::ROW_PINS
 		.iter()
-		.map(|&pin| proc_macro2::Literal::usize_unsuffixed(pin))
+		.map(|&pin| pin.parse::<TokenStream>().unwrap())
 		.collect();
 
 	let cols: Vec<_> = device::COL_PINS
 		.iter()
-		.map(|&pin| proc_macro2::Literal::usize_unsuffixed(pin))
+		.map(|&pin| pin.parse::<TokenStream>().unwrap())
 		.collect();
-
-	let row_pins = rows.iter().map(|r| format_ident!("gpio{r}"));
-	let col_pins = cols.iter().map(|c| format_ident!("gpio{c}"));
 
 	quote! {
 		#[derive(Debug)]
@@ -42,16 +52,6 @@ fn keyboard_tokens() -> TokenStream {
 			cols = [#(#cols),*]
 		)]
 		pub struct KeyboardMatrix;
-
-		#[macro_export]
-		macro_rules! setup_keyboard {
-			($pins:ident) => {{
-				$crate::codegen::KeyboardMatrix::new(
-					(#($pins.#row_pins),*),
-					(#($pins.#col_pins),*),
-				)
-			}}
-		}
 	}
 }
 
@@ -82,9 +82,26 @@ fn codegen(file: &mut BufWriter<File>) {
 	file.write_all(formatted.as_bytes()).unwrap();
 }
 
+fn processor_cfgs(p: Processor) {
+	match p {
+		Processor::RP2040 => {}
+		Processor::STM32F411 => {
+			println!("cargo::rustc-cfg=stm32f411_bank_b");
+
+			println!("cargo::rustc-check-cfg=cfg(stm32f411_bank_b)");
+			println!("cargo::rustc-check-cfg=cfg(stm32f411_bank_c)");
+			println!("cargo::rustc-check-cfg=cfg(stm32f411_bank_d)");
+			println!("cargo::rustc-check-cfg=cfg(stm32f411_bank_e)");
+			println!("cargo::rustc-check-cfg=cfg(stm32f411_bank_h)");
+		}
+	}
+}
+
 fn main() {
 	let out = std::env::var_os("OUT_DIR").unwrap();
 	let out = PathBuf::from(out);
+
+	check_exclusive_pins();
 
 	let mut codegen_file = File::create_buffered(out.join("codegen.rs")).unwrap();
 	codegen(&mut codegen_file);
@@ -101,16 +118,30 @@ fn main() {
 		)
 	};
 
-	let mut f = File::create(out.join("memory.x")).unwrap();
-	f.write_all(memory_x.as_bytes()).unwrap();
+	let mut mem_x_file = File::create(out.join("memory.x")).unwrap();
+	mem_x_file.write_all(memory_x.as_bytes()).unwrap();
 
 	println!("cargo:rustc-link-search={}", out.display());
 
 	println!("cargo:rustc-link-arg-bins=--nmagic");
 	println!("cargo:rustc-link-arg-bins=-Tlink.x");
 	// println!("cargo:rustc-link-arg-bins=-Tlink-rp.x");
-	println!("cargo:rustc-link-arg-bins=-Tdefmt.x");
 
-	println!("cargo::rustc-cfg=processor=\"{}\"", processor.as_str());
-	println!("cargo::rustc-cfg=keyboard");
+	if std::env::var("CARGO_FEATURE_DEFMT").is_ok() {
+		println!("cargo:rustc-link-arg-bins=-Tdefmt.x");
+	}
+
+	match device::DEVICE {
+		Device::Keyboard => {
+			println!("cargo::rustc-cfg=keyboard");
+		}
+	}
+
+	processor_cfgs(processor);
+
+	if device::LED_PIN.is_some() {
+		println!("cargo::rustc-cfg=has_led");
+	}
+
+	println!("cargo::rustc-check-cfg=cfg(has_led)");
 }
