@@ -86,11 +86,9 @@ fn main() {
 	let memory_x = {
 		const KEYMAP_SIZE: usize = device::LAYER0.get_packed_size();
 
-		output_linker_script::<qubit_config::keyboard::KeyboardConfiguration<KEYMAP_SIZE>>(
-			mcu,
-			device::FLASH,
-			device_type,
-		)
+		type Keymaps = qubit_config::keyboard::Keymaps<KEYMAP_SIZE>;
+
+		output_linker_script::<Keymaps>(mcu, device::FLASH, device_type)
 	};
 
 	let mut mem_x_file = File::create(out.join("memory.x")).unwrap();

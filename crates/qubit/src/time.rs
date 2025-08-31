@@ -5,7 +5,13 @@ use rp2040_hal as hal;
 use hal::Timer;
 use hal::fugit::MicrosDurationU64;
 
+#[derive(Debug)]
+pub enum Error {
+	WouldBlock,
+}
+
 /// A `CountDown` implementation that was part of `embedded_hall` 2.0.
+// #[derive(Debug)]
 pub struct CountDown {
 	timer: Timer,
 	period: MicrosDurationU64,
@@ -28,8 +34,8 @@ impl CountDown {
 	pub fn start<T: Into<MicrosDurationU64>>(&mut self, count: T) {
 		self.period = count.into();
 
-		let next_end = self.timer.get_counter().ticks();
-		self.next_end = Some(next_end.wrapping_add(self.period.to_micros()));
+		let next_end = self.timer.get_counter().ticks().wrapping_add(self.period.to_micros());
+		self.next_end = Some(next_end);
 	}
 
 	/// "Blockingly" wait until the countdown is finished.
@@ -42,7 +48,7 @@ impl CountDown {
 	/// # Panics
 	///
 	/// Panics if the countdown was not started.
-	pub fn wait(&mut self) -> Result<(), &'static str> {
+	pub fn wait(&mut self) -> Result<(), Error> {
 		if let Some(end) = self.next_end {
 			let current_ticks = self.timer.get_counter().ticks();
 
@@ -51,7 +57,7 @@ impl CountDown {
 
 				Ok(())
 			} else {
-				Err("not finished")
+				Err(Error::WouldBlock)
 			}
 		} else {
 			panic!("CountDown not started!");

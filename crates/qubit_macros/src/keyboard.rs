@@ -39,6 +39,13 @@ pub fn keyboard_matrix_macro(args: TokenStream, item: TokenStream) -> TokenStrea
 	};
 
 	let struct_impl = {
+		// Get the total amount of keys, excluding the empty spaces.
+		let bitmap_count_const = {
+			let keys_count: usize = keymap.keymap.iter().flatten().filter(|&&x| x != 0).count();
+
+			quote! { pub const BITMAP_COUNT: usize = #keys_count.div_ceil(usize::BITS as usize); }
+		};
+
 		let new_method = {
 			let row_args = fields::map_new_args(mcu, &rows);
 			let col_args = fields::map_new_args(mcu, &cols);
@@ -61,6 +68,7 @@ pub fn keyboard_matrix_macro(args: TokenStream, item: TokenStream) -> TokenStrea
 
 		quote! {
 			impl #struct_name {
+				#bitmap_count_const
 				#new_method
 				#pressed_keys_method
 			}
@@ -110,9 +118,6 @@ fn def_pressed_keys_method(
 			quote! {}
 		}
 	};
-
-	// Get the total amount of keys, excluding the empty spaces.
-	let keys_count: usize = keymap.keymap.iter().flatten().filter(|&&x| x != 0).count();
 
 	let delay_call = match mcu {
 		Mcu::RP2040 | Mcu::STM32F411 => quote! { ::cortex_m::asm::delay(#delay); },
@@ -200,16 +205,14 @@ fn def_pressed_keys_method(
 		}
 	});
 
-	let bitmaps_count = quote! { #keys_count.div_ceil(usize::BITS as usize) };
-
 	quote! {
 		#[doc = r"Scans the key matrix and returns a bitmap of pressed keys."]
-		#visibility fn get_pressed_keys(&mut self) -> [usize; #bitmaps_count] {
+		#visibility fn get_pressed_keys(&mut self) -> [usize; Self::BITMAP_COUNT] {
 			#imports
 
 			const USIZE_BITS: usize = usize::BITS as usize;
 
-			let mut bitmaps = [0_usize; #bitmaps_count];
+			let mut bitmaps = [0_usize; Self::BITMAP_COUNT];
 
 			#(#check_tokens)*
 

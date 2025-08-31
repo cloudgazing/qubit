@@ -169,7 +169,7 @@ impl syn::parse::Parse for Attributes {
 			}
 		}
 
-		let delay = delay.unwrap_or(40);
+		let delay = delay.unwrap_or(80);
 		let mcu = mcu.ok_or(syn::Error::new(stream.span(), "Missing `mcu` argument."))?;
 		let rows = rows.ok_or(syn::Error::new(stream.span(), "Missing `rows` argument."))?;
 		let cols = cols.ok_or(syn::Error::new(stream.span(), "Missing `cols` argument."))?;

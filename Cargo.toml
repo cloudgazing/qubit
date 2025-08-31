@@ -9,8 +9,10 @@ members = [
 default-members = ["crates/qubit"]
 
 [workspace.package]
+version = "0.0.180"
 authors = ["cloudgazing"]
 edition = "2024"
+repository = "https://github.com/cloudgazing/qubit"
 license = "MIT OR Apache-2.0"
 publish = false
 
@@ -23,10 +25,10 @@ defmt = "1.0.1"
 defmt-rtt = "1.0.0"
 embedded-hal = "1.0.0"
 fugit = "0.3.7"
-heapless = { version = "0.8.0" }
+heapless = { version = "0.9.1" }
 panic-probe = { version = "1.0.0", features = ["print-defmt"] }
-prettyplease = "0.2.36"
-proc-macro2 = "1.0.95"
+prettyplease = "0.2.37"
+proc-macro2 = "1.0.101"
 qubit_config = { path = "crates/qubit_config" }
 qubit_device = { path = "crates/qubit_device" }
 qubit_macros = { path = "crates/qubit_macros" }
@@ -36,22 +38,27 @@ rp2040-hal = { version = "0.11.0", features = ["critical-section-impl", "rt"] }
 semver = "1.0.26"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_arrays = "0.2.0"
-serde_json = "1.0.141"
+serde_json = "1.0.143"
 stm32f4xx-hal = { version = "0.22.1", features = ["usb_fs"] }
-syn = "2.0.104"
-toml = "0.9.2"
+syn = "2.0.106"
+toml = "0.9.5"
 usb-device = "0.3.2"
 usbd-hid = "0.8.2"
 usbd-serial = "0.2.2"
 
 [workspace.lints.clippy]
+infinite_loop = "warn"
 pedantic = "warn"
 todo = "warn"
 undocumented_unsafe_blocks = "warn"
+unnecessary_safety_comment = "warn"
+unnecessary_safety_doc = "warn"
+wildcard_dependencies = "warn"
 
 [workspace.lints.rust]
+unexpected_cfgs = "warn"
+unsafe_op_in_unsafe_fn = "deny"
 unused_crate_dependencies = "warn"
-unexpected_cfgs = { level = "warn" }
 
 [profile.dev]
 opt-level = "s"

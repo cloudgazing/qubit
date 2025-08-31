@@ -17,19 +17,23 @@ impl syn::parse::Parse for Input {
 
 		let model_ident: Ident = input.parse()?;
 
-		let Ok(author_value) = std::env::var(author_ident.to_string()) else {
-			let err_msg = format!("Failed to read env value {author_ident}");
-			return Err(syn::Error::new(author_ident.span(), err_msg));
+		let author = match std::env::var(author_ident.to_string()) {
+			Ok(value) => Ident::new(&value, author_ident.span()),
+			Err(e) => {
+				let msg = format!("Failed to read env value {author_ident}. {e}");
+
+				return Err(syn::Error::new(author_ident.span(), msg));
+			}
 		};
 
-		let author = Ident::new(&author_value, author_ident.span());
+		let model = match std::env::var(model_ident.to_string()) {
+			Ok(value) => Ident::new(&value, model_ident.span()),
+			Err(e) => {
+				let msg = format!("Failed to read env value {model_ident}. {e}");
 
-		let Ok(model_value) = std::env::var(model_ident.to_string()) else {
-			let err_msg = format!("Failed to read env value {model_ident}");
-			return Err(syn::Error::new(model_ident.span(), err_msg));
+				return Err(syn::Error::new(model_ident.span(), msg));
+			}
 		};
-
-		let model = Ident::new(&model_value, model_ident.span());
 
 		Ok(Self { author, model })
 	}

@@ -97,6 +97,7 @@ impl MemoryRegion {
 	}
 }
 
+#[derive(Debug)]
 pub struct MemorySpace {
 	pub flash: MemoryRegion,
 	pub ram: MemoryRegion,
@@ -149,6 +150,7 @@ impl MemorySpace {
 	}
 }
 
+#[derive(Debug)]
 pub struct Section {
 	pub section_name: &'static str,
 	pub mem_region_name: &'static str,

@@ -1,8 +1,9 @@
 [package]
 name = "qubit_device"
-version = "0.0.175"
+version.workspace = true
 authors.workspace = true
 edition.workspace = true
+repository.workspace = true
 license.workspace = true
 publish.workspace = true
 

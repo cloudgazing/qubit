@@ -1,9 +1,10 @@
 [package]
 name = "qubit"
-version = "0.0.175"
+version.workspace = true
 authors.workspace = true
 edition.workspace = true
 description = "Qubit Firmware."
+repository.workspace = true
 license.workspace = true
 publish.workspace = true
 
@@ -41,7 +42,7 @@ stm32f4xx-hal = { workspace = true, features = ["stm32f411"] }
 
 [features]
 default = ["defmt", "silverplate"]
-defmt = ["defmt-rtt", "dep:defmt", "heapless/defmt-03"]
+defmt = ["defmt-rtt", "dep:defmt", "heapless/defmt"]
 silverplate = []
 
 [lints]

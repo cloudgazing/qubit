@@ -2,6 +2,7 @@ pub mod keycodes;
 
 pub type PackedKeymap<const S: usize> = [u8; S];
 
+#[derive(Debug)]
 pub struct Keymap<const R: usize, const C: usize>(pub [[u8; C]; R]);
 
 impl<const R: usize, const C: usize> Keymap<R, C> {
@@ -81,11 +82,6 @@ pub struct Keymaps<const S: usize> {
 	pub keymap_2: PackedKeymap<S>,
 	pub keymap_3: PackedKeymap<S>,
 	pub keymap_4: PackedKeymap<S>,
-}
-
-#[derive(Debug)]
-pub struct KeyboardConfiguration<const S: usize> {
-	pub keymaps: Keymaps<S>,
 }
 
 /// Generate a keymap using the predefined keycodes.

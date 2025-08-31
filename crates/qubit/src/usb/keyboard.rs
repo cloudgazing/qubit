@@ -1,8 +1,5 @@
 use core::mem::MaybeUninit;
 
-use qubit_config::keyboard::keycodes::{
-	KM_LALT, KM_LCTRL, KM_LMETA, KM_LSHIFT, KM_RALT, KM_RCTRL, KM_RMETA, KM_RSHIFT,
-};
 use usb_device::bus::UsbBusAllocator;
 use usbd_hid::hid_class::{HIDClass, HidClassSettings, HidCountryCode, HidProtocol, HidSubClass, ProtocolModeConfig};
 
@@ -15,49 +12,25 @@ mod report;
 #[cfg(feature = "silverplate")]
 mod silverplate;
 
-//
-use qubit_config::keyboard::Keymaps;
-
-use crate::codegen;
-
-pub const PACKED_SIZE: usize = codegen::LAYER0.get_packed_size();
-pub const PRESSED_KEYS_BITMAPS_LEN: usize = PACKED_SIZE.div_ceil(usize::BITS as usize);
-
-pub type KeyboardConfiguration = qubit_config::keyboard::KeyboardConfiguration<PACKED_SIZE>;
-//
-
-#[used]
-#[unsafe(link_section = ".keyboard")]
-static CONFIG: KeyboardConfiguration = KeyboardConfiguration {
-	keymaps: Keymaps {
-		keymap_0: codegen::LAYER0.get_packed(),
-		keymap_1: codegen::LAYER1.get_packed(),
-		keymap_2: codegen::LAYER2.get_packed(),
-		keymap_3: codegen::LAYER3.get_packed(),
-		keymap_4: codegen::LAYER4.get_packed(),
-	},
-};
-
 /// HID class for a keyboard device.
+#[unsafe(link_section = ".uninit.HID_CLASS")]
 static mut HID_CLASS: MaybeUninit<HIDClass<'static, UsbBus>> = MaybeUninit::uninit();
 
 #[derive(Debug)]
 pub struct KeyboardInstance {
-	is_nkro: bool,
-	prev_nkro_report: report::KeyboardNkroReport,
-	prev_6kro_report: report::Keyboard6kroReport,
 	matrix: KeyboardMatrix,
+	is_nkro: bool,
+	report_state: report::ReportState,
+	keymaps_state: keymaps::KeymapsState,
 }
 
 impl KeyboardInstance {
-	/// Creates a new [`KeyboardInstance`] and initializes required static state.
+	/// Creates a new [`KeyboardInstance`].
 	///
 	/// # Safety
 	///
-	/// This function must only be called **once** for the entire lifetime of the program.
-	///
-	/// If the `serial` feature is enabled, the caller must ensure the static for the port was
-	/// already initialized using [`init_class`](super::serial::init_class) before calling this method.
+	/// This method sets the value of a `static mut` and should only be called once to prevent the previous values
+	/// from being leaked and other USB device issues that could occur.
 	pub unsafe fn new(usb_bus_alloc: &'static UsbBusAllocator<UsbBus>, matrix: KeyboardMatrix) -> Self {
 		// Set the value of the HID static.
 		let hid_settings = HidClassSettings {
@@ -87,74 +60,42 @@ impl KeyboardInstance {
 			(*ptr).write(hid_class);
 		}
 
-		// SAFETY: The caller guarantees this will be called only once.
-		unsafe {
-			keymaps::init_active_keymaps();
-		}
-
 		Self {
-			is_nkro,
-			prev_nkro_report: [0; 34],
-			prev_6kro_report: [0; 9],
 			matrix,
+			is_nkro,
+			report_state: report::ReportState::new(),
+			keymaps_state: keymaps::KeymapsState::new(),
 		}
 	}
 
 	/// Scans the keyboard matrix, constructs a HID report, and sends it over USB (if changed).
 	/// A critical section is used to ensure safe, exclusive access to global mutable state.
 	pub fn send_pressed_keys(&mut self) {
-		let pressed_keys = self.matrix.get_pressed_keys();
+		let scanned_keys = self.matrix.get_pressed_keys();
 
-		if self.is_nkro {
-			// SAFETY: The active keymap was initialized before this call.
-			let report = unsafe { report::construct_nkro_report(pressed_keys) };
-
-			if report != self.prev_nkro_report {
-				cortex_m::interrupt::free(|_| {
-					let hid_class = {
-						let ptr = &raw const HID_CLASS;
-
-						// SAFETY: This is safe because:
-						//
-						// * The content was fully initialized when this struct was created.
-						// * We access this inside the critical section which prevents two mutable references
-						// to the value from being created.
-						unsafe { (*ptr).assume_init_ref() }
-					};
-
-					_ = hid_class.push_raw_input(report.as_ref());
-				});
-
-				self.prev_nkro_report = report;
-
-				#[cfg(feature = "defmt")]
-				report::log_nkro_report(report);
-			}
+		let report_opt = if self.is_nkro {
+			self.report_state
+				.build_nkro_report(&mut self.keymaps_state, &scanned_keys)
 		} else {
-			// SAFETY: The active keymap was initialized before this call.
-			let report = unsafe { report::construct_6kro_report(pressed_keys) };
+			self.report_state
+				.build_6kro_report(&mut self.keymaps_state, &scanned_keys)
+		};
 
-			if report != self.prev_6kro_report {
-				cortex_m::interrupt::free(|_| {
-					let hid_class = {
-						let ptr = &raw const HID_CLASS;
+		if let Some(report) = report_opt {
+			cortex_m::interrupt::free(|_| {
+				let hid_class = {
+					let ptr = &raw const HID_CLASS;
 
-						// SAFETY: This is safe because:
-						//
-						// * The content was fully initialized when this struct was created.
-						// * We access this inside the critical section which prevents two mutable references
-						// to the value from being created.
-						unsafe { (*ptr).assume_init_ref() }
-					};
+					// SAFETY: This is safe because:
+					//
+					// * The content was fully initialized when this struct was created.
+					// * We access this inside the critical section which prevents two mutable references
+					// to the value from being created.
+					unsafe { (*ptr).assume_init_ref() }
+				};
 
-					_ = hid_class.push_raw_input(report.as_ref());
-				});
-
-				self.prev_6kro_report = report;
-
-				#[cfg(feature = "defmt")]
-				report::log_6kro_report(report);
-			}
+				_ = hid_class.push_raw_input(report);
+			});
 		}
 	}
 }
@@ -214,6 +155,10 @@ pub fn process_incoming_report(keyboard_hid: &mut HIDClass<UsbBus>) {
 }
 
 fn process_led_report(led_byte: u8) {
+	use qubit_config::keyboard::keycodes::{
+		KM_LALT, KM_LCTRL, KM_LMETA, KM_LSHIFT, KM_RALT, KM_RCTRL, KM_RMETA, KM_RSHIFT,
+	};
+
 	let mut left_ctrl = false;
 	let mut left_shift = false;
 	let mut left_alt = false;

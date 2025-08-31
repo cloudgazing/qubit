@@ -1,15 +1,19 @@
 include = "./config-extend.toml"
-
 target-applies-to-host = false
 
 [unstable]
 config-include = true
 host-config = true
 target-applies-to-host = true
+trim-paths = true
 
 [env]
-DEFMT_LOG = "info"
+DEFMT_LOG = "debug"
 
-[target.thumbv6m-none-eabi]
+[target.'cfg(all(target_arch = "arm", target_os = "none"))']
 linker = "flip-link"
-runner = "elf2uf2-rs -d -s"
+
+# runner = "elf2uf2-rs -d -s"
+
+[profile.release]
+trim-paths = true
