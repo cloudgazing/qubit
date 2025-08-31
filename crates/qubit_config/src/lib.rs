@@ -1,4 +1,3 @@
-#![feature(strict_overflow_ops)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(feature = "build")]

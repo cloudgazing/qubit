@@ -1,58 +1,110 @@
-use core::mem::MaybeUninit;
+use core::num::NonZeroU8;
 
-use qubit_config::keyboard::Keymaps;
+pub(super) const PACKED_SIZE: usize = crate::codegen::LAYER0.get_packed_size();
 
-use super::{CONFIG, PACKED_SIZE};
+pub type Keymaps = qubit_config::keyboard::Keymaps<PACKED_SIZE>;
 
-static mut ACTIVE_KEYMAPS: MaybeUninit<Keymaps<PACKED_SIZE>> = MaybeUninit::uninit();
+#[used]
+#[unsafe(link_section = ".keyboard")]
+static DEFAULT_KEYMAPS: Keymaps = Keymaps {
+	keymap_0: crate::codegen::LAYER0.get_packed(),
+	keymap_1: crate::codegen::LAYER1.get_packed(),
+	keymap_2: crate::codegen::LAYER2.get_packed(),
+	keymap_3: crate::codegen::LAYER3.get_packed(),
+	keymap_4: crate::codegen::LAYER4.get_packed(),
+};
 
-/// Get the keymap from the storage.
-///
-/// This does nothing for now and it's just a reminder to implement EEPROM support.
-///
-/// TODO: Keymaps should be stored in an EEPROM or something similar.
-fn fetch_stored_keymap() -> Option<Keymaps<PACKED_SIZE>> {
-	// Here I need to read from the EEPROM chip.
-	let stored_keymap: Option<Keymaps<PACKED_SIZE>> = None;
-
-	stored_keymap
+#[derive(Debug, Clone, Copy)]
+pub enum Layer {
+	L0,
+	L1,
+	L2,
+	L3,
+	L4,
 }
 
-/// # Safety
-///
-/// This function must be called **only once** for the lifetime of the program.
-pub unsafe fn init_active_keymaps() {
-	let keymap = if let Some(keymap) = fetch_stored_keymap() {
-		keymap
-	} else {
-		Keymaps {
-			keymap_0: CONFIG.keymaps.keymap_0,
-			keymap_1: CONFIG.keymaps.keymap_1,
-			keymap_2: CONFIG.keymaps.keymap_2,
-			keymap_3: CONFIG.keymaps.keymap_3,
-			keymap_4: CONFIG.keymaps.keymap_4,
+#[derive(Debug)]
+pub struct KeymapsState {
+	active_keymaps: Keymaps,
+	active_layers: u8,
+}
+
+impl KeymapsState {
+	pub fn new() -> Self {
+		let active_keymaps = Keymaps {
+			keymap_0: DEFAULT_KEYMAPS.keymap_0,
+			keymap_1: DEFAULT_KEYMAPS.keymap_1,
+			keymap_2: DEFAULT_KEYMAPS.keymap_2,
+			keymap_3: DEFAULT_KEYMAPS.keymap_3,
+			keymap_4: DEFAULT_KEYMAPS.keymap_4,
+		};
+
+		Self {
+			active_keymaps,
+			active_layers: 0b0000_0001,
 		}
-	};
-
-	let ptr = &raw mut ACTIVE_KEYMAPS;
-
-	// SAFETY: `ptr` was obtained from a static value and so is guaranteed to be non-null and properly
-	// aligned. This sets the value of the MaybeUninit.
-	unsafe {
-		(*ptr).write(keymap);
 	}
-}
 
-/// # Safety
-///
-/// Calling this function before initializing the active keymap is **undefined behavior**.
-pub const unsafe fn get_keymap_keycode(index: usize) -> u8 {
-	let active_keymap = {
-		let ptr = &raw mut ACTIVE_KEYMAPS;
+	pub fn get_keycode(&self, idx: usize) -> NonZeroU8 {
+		const NO_KEY: NonZeroU8 = NonZeroU8::new(1).unwrap();
 
-		// SAFETY: The caller gurantees the keymap was initialized.
-		unsafe { (*ptr).assume_init_ref() }
-	};
+		let mut active_layers = self.active_layers;
 
-	active_keymap.keymap_0[index]
+		while active_layers != 0 {
+			let set_bit = 7 - active_layers.leading_zeros() as usize;
+
+			let code = match set_bit {
+				0 => self.active_keymaps.keymap_0[idx],
+				1 => self.active_keymaps.keymap_1[idx],
+				2 => self.active_keymaps.keymap_2[idx],
+				3 => self.active_keymaps.keymap_3[idx],
+				4 => self.active_keymaps.keymap_4[idx],
+				_ => panic!(),
+			};
+
+			if let Some(code) = NonZeroU8::new(code) {
+				return code;
+			}
+
+			active_layers &= !(1 << set_bit);
+		}
+
+		NO_KEY
+	}
+
+	pub fn enable_layer(&mut self, layer: Layer) {
+		let layer_num: u8 = match layer {
+			Layer::L0 => 0,
+			Layer::L1 => 1,
+			Layer::L2 => 2,
+			Layer::L3 => 3,
+			Layer::L4 => 4,
+		};
+
+		self.active_layers |= 1 << layer_num;
+	}
+
+	pub fn disable_layer(&mut self, layer: Layer) {
+		let layer_num: u8 = match layer {
+			Layer::L0 => 0,
+			Layer::L1 => 1,
+			Layer::L2 => 2,
+			Layer::L3 => 3,
+			Layer::L4 => 4,
+		};
+
+		self.active_layers &= !(1 << layer_num);
+	}
+
+	// pub fn toggle_layer(&mut self, layer: Layer) {
+	// 	let layer_num: u8 = match layer {
+	// 		Layer::L0 => 0,
+	// 		Layer::L1 => 1,
+	// 		Layer::L2 => 2,
+	// 		Layer::L3 => 3,
+	// 		Layer::L4 => 4,
+	// 	};
+
+	// 	self.active_layers ^= 1 << layer_num;
+	// }
 }

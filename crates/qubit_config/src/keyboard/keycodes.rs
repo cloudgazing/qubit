@@ -424,11 +424,20 @@ pub const KC_M_EJECTCD: NonZeroU8 = NonZeroU8::new(0xEC).unwrap();
 pub const KC_M_VOLUMEUP: NonZeroU8 = NonZeroU8::new(0xED).unwrap();
 pub const KC_M_VOLUMEDOWN: NonZeroU8 = NonZeroU8::new(0xEE).unwrap();
 pub const KC_M_MUTE: NonZeroU8 = NonZeroU8::new(0xEF).unwrap();
-pub const KC_M_WWW: NonZeroU8 = NonZeroU8::new(0xF0).unwrap();
-pub const KC_M_BACK: NonZeroU8 = NonZeroU8::new(0xF1).unwrap();
-pub const KC_M_FORWARD: NonZeroU8 = NonZeroU8::new(0xF2).unwrap();
-pub const KC_M_STOP: NonZeroU8 = NonZeroU8::new(0xF3).unwrap();
-pub const KC_M_FIND: NonZeroU8 = NonZeroU8::new(0xF4).unwrap();
+
+// TEMPORARY, used for test
+
+pub const KC_LAYER_0: NonZeroU8 = NonZeroU8::new(0xF0).unwrap();
+pub const KC_LAYER_1: NonZeroU8 = NonZeroU8::new(0xF1).unwrap();
+pub const KC_LAYER_2: NonZeroU8 = NonZeroU8::new(0xF2).unwrap();
+pub const KC_LAYER_3: NonZeroU8 = NonZeroU8::new(0xF3).unwrap();
+pub const KC_LAYER_4: NonZeroU8 = NonZeroU8::new(0xF4).unwrap();
+// pub const KC_M_WWW: NonZeroU8 = NonZeroU8::new(0xF0).unwrap();
+// pub const KC_M_BACK: NonZeroU8 = NonZeroU8::new(0xF1).unwrap();
+// pub const KC_M_FORWARD: NonZeroU8 = NonZeroU8::new(0xF2).unwrap();
+// pub const KC_M_STOP: NonZeroU8 = NonZeroU8::new(0xF3).unwrap();
+// pub const KC_M_FIND: NonZeroU8 = NonZeroU8::new(0xF4).unwrap();
+
 pub const KC_M_SCROLLUP: NonZeroU8 = NonZeroU8::new(0xF5).unwrap();
 pub const KC_M_SCROLLDOWN: NonZeroU8 = NonZeroU8::new(0xF6).unwrap();
 pub const KC_M_EDIT: NonZeroU8 = NonZeroU8::new(0xF7).unwrap();

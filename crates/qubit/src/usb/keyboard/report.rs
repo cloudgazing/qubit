@@ -1,18 +1,31 @@
 use core::num::NonZeroU8;
 
-use qubit_config::keyboard::keycodes::{KC_A, KC_LEFTCTRL, KC_RIGHTMETA, RESERVED};
+use qubit_config::keyboard::keycodes::{
+	KC_A, KC_LAYER_0, KC_LAYER_1, KC_LAYER_2, KC_LAYER_3, KC_LAYER_4, KC_LEFTCTRL, KC_RIGHTMETA, RESERVED,
+};
 
-use super::PRESSED_KEYS_BITMAPS_LEN;
 use super::descriptor::KB_REP_ID_IN;
-use super::keymaps::get_keymap_keycode;
+use super::keymaps::{KeymapsState, Layer, PACKED_SIZE};
+use crate::codegen::KeyboardMatrix;
+
+type ScannedKeys = [usize; KeyboardMatrix::BITMAP_COUNT];
 
 // id + modifier + reserved + 6 keys
-pub type Keyboard6kroReport = [u8; 9];
+pub type Report6kro = [u8; 9];
 // id + modifier + 32 bytes bitmap
-pub type KeyboardNkroReport = [u8; 34];
+pub type ReportNkro = [u8; 34];
+
+pub const EMPTY_6KRO_REPORT: Report6kro = [KB_REP_ID_IN, 0, RESERVED, 0, 0, 0, 0, 0, 0];
+pub const EMPTY_NKRO_REPORT: ReportNkro = {
+	let mut report = [0u8; 34];
+
+	report[0] = KB_REP_ID_IN;
+
+	report
+};
 
 /// Checks the keycode is within the range of "normal" codes.
-fn is_normal_key(key_code: NonZeroU8) -> bool {
+fn is_normal(key_code: NonZeroU8) -> bool {
 	// 0xdd  Keypad Hexadecimal
 	const KEYPAD_HEXDEC: NonZeroU8 = NonZeroU8::new(0xDD).unwrap();
 
@@ -21,7 +34,7 @@ fn is_normal_key(key_code: NonZeroU8) -> bool {
 
 /// Checks if the keycode matches a modifier scan code and turns it into it's modifier mask
 /// counterpart.
-fn is_modifier_key(key_code: NonZeroU8) -> Option<NonZeroU8> {
+fn is_modifier(key_code: NonZeroU8) -> Option<NonZeroU8> {
 	if key_code >= KC_LEFTCTRL && key_code <= KC_RIGHTMETA {
 		let modifier_mask: u8 = 1 << (key_code.get() & 0x07);
 
@@ -29,175 +42,286 @@ fn is_modifier_key(key_code: NonZeroU8) -> Option<NonZeroU8> {
 		// a value between 0 and 7.
 		let mask = unsafe { NonZeroU8::new_unchecked(modifier_mask) };
 
-		Some(mask)
-	} else {
+		return Some(mask);
+	}
+
+	None
+}
+
+fn is_layer(keycode: NonZeroU8) -> Option<Layer> {
+	match keycode {
+		KC_LAYER_0 => Some(Layer::L0),
+		KC_LAYER_1 => Some(Layer::L1),
+		KC_LAYER_2 => Some(Layer::L2),
+		KC_LAYER_3 => Some(Layer::L3),
+		KC_LAYER_4 => Some(Layer::L4),
+		_ => None,
+	}
+}
+
+#[derive(Debug)]
+pub struct ReportState {
+	prev_6kro_report: Report6kro,
+	prev_nkro_report: ReportNkro,
+
+	prev_scanned_keys: ScannedKeys,
+	pressed_keys: [Option<NonZeroU8>; PACKED_SIZE],
+}
+
+impl ReportState {
+	pub fn new() -> Self {
+		Self {
+			prev_6kro_report: EMPTY_6KRO_REPORT,
+			prev_nkro_report: EMPTY_NKRO_REPORT,
+
+			prev_scanned_keys: [0; KeyboardMatrix::BITMAP_COUNT],
+			pressed_keys: [None; PACKED_SIZE],
+		}
+	}
+
+	#[allow(
+		clippy::trivially_copy_pass_by_ref,
+		reason = "Lint is triggered only when `scanned_keys` has one element. Makes sense to allow since that has the
+		same size as the target pointer width."
+	)]
+	pub fn build_6kro_report(&mut self, keymaps: &mut KeymapsState, scanned_keys: &ScannedKeys) -> Option<&[u8]> {
+		const USIZE_BITS: usize = usize::BITS as usize;
+
+		let mut report = self.prev_6kro_report;
+
+		for (current_idx, current_bitmap) in scanned_keys.iter().enumerate() {
+			let offset = current_idx * USIZE_BITS;
+
+			let prev_bitmap = self.prev_scanned_keys[current_idx];
+
+			let mut set_bitmap = current_bitmap & !prev_bitmap;
+			let mut cleared_bitmap = prev_bitmap & !current_bitmap;
+
+			while cleared_bitmap != 0 {
+				let bit_pos = cleared_bitmap.trailing_zeros() as usize;
+
+				let flat_idx = offset + bit_pos;
+
+				let keycode = self.pressed_keys[flat_idx].take().unwrap();
+
+				if let Some(layer) = is_layer(keycode) {
+					keymaps.disable_layer(layer);
+				} else if is_normal(keycode) {
+					if let Some(slot) = report[3..9].iter_mut().find(|slot| **slot == keycode.get()) {
+						*slot = 0;
+					}
+				} else if let Some(mod_code) = is_modifier(keycode) {
+					report[1] &= !mod_code.get();
+				}
+
+				cleared_bitmap &= !(1 << bit_pos);
+			}
+
+			while set_bitmap != 0 {
+				let bit_pos = set_bitmap.trailing_zeros() as usize;
+
+				let flat_idx = offset + bit_pos;
+
+				let keycode = keymaps.get_keycode(flat_idx);
+
+				self.pressed_keys[flat_idx] = Some(keycode);
+
+				if let Some(layer) = is_layer(keycode) {
+					keymaps.enable_layer(layer);
+				} else if is_normal(keycode) {
+					if let Some(slot) = report[3..9].iter_mut().find(|slot| **slot == 0) {
+						*slot = keycode.get();
+					}
+				} else if let Some(mod_code) = is_modifier(keycode) {
+					report[1] |= mod_code.get();
+				}
+
+				set_bitmap &= !(1 << bit_pos);
+			}
+
+			self.prev_scanned_keys[current_idx] = *current_bitmap;
+		}
+
+		if report != self.prev_6kro_report {
+			self.prev_6kro_report = report;
+
+			#[cfg(feature = "defmt")]
+			self.log_6kro_report();
+
+			return Some(&self.prev_6kro_report);
+		}
+
 		None
 	}
-}
 
-/// # Safety
-///
-/// Calling this function before the active keymap was initiated is **undefined behavior**.
-pub unsafe fn construct_6kro_report(pressed_keys: [usize; PRESSED_KEYS_BITMAPS_LEN]) -> Keyboard6kroReport {
-	const USIZE_BITS: usize = usize::BITS as usize;
-	const REPORT_LEN: usize = core::mem::size_of::<Keyboard6kroReport>();
+	#[allow(
+		clippy::trivially_copy_pass_by_ref,
+		reason = "Lint is triggered only when `scanned_keys` has one element. Makes sense to allow since that has the
+		same size as the target pointer width."
+	)]
+	pub fn build_nkro_report(&mut self, keymaps: &mut KeymapsState, scanned_keys: &ScannedKeys) -> Option<&[u8]> {
+		const USIZE_BITS: usize = usize::BITS as usize;
 
-	let mut report: Keyboard6kroReport = [KB_REP_ID_IN, 0, RESERVED, 0, 0, 0, 0, 0, 0];
+		let mut report = self.prev_nkro_report;
 
-	let mut i = 3;
+		for (current_idx, current_bitmap) in scanned_keys.iter().enumerate() {
+			let offset = current_idx * USIZE_BITS;
 
-	for (index, mut bitmap) in pressed_keys.into_iter().enumerate() {
-		let offset = index * USIZE_BITS;
+			let prev_bitmap = self.prev_scanned_keys[current_idx];
 
-		while bitmap != 0 {
-			let pressed_bit = bitmap.trailing_zeros() as usize;
+			let mut set_bitmap = current_bitmap & !prev_bitmap;
+			let mut cleared_bitmap = prev_bitmap & !current_bitmap;
 
-			let flat_index = offset + pressed_bit;
+			while cleared_bitmap != 0 {
+				let bit_pos = cleared_bitmap.trailing_zeros() as usize;
 
-			// SAFETY: The caller gurantees the keymap was initiated.
-			let code = unsafe { get_keymap_keycode(flat_index) };
+				let flat_idx = offset + bit_pos;
 
-			if let Some(code) = NonZeroU8::new(code) {
-				if i < REPORT_LEN && is_normal_key(code) {
-					report[i] = code.get();
+				let keycode = self.pressed_keys[flat_idx].take().unwrap();
 
-					i += 1;
-				} else if let Some(mod_code) = is_modifier_key(code) {
-					report[1] |= mod_code.get();
+				if let Some(layer) = is_layer(keycode) {
+					keymaps.disable_layer(layer);
+				} else if is_normal(keycode) {
+					let byte_idx = ((keycode.get() / 8) + 2) as usize;
+					let bit_idx = (keycode.get() % 8) as usize;
+
+					// This will always be within bounds because (u8::MAX / 8) + 2 = 33
+					report[byte_idx] &= !(1 << bit_idx);
+				} else if let Some(mod_code) = is_modifier(keycode) {
+					report[1] &= !mod_code.get();
 				}
+
+				cleared_bitmap &= !(1 << bit_pos);
 			}
 
-			// Clear the bit
-			bitmap &= !(1 << pressed_bit);
-		}
-	}
+			while set_bitmap != 0 {
+				let bit_pos = set_bitmap.trailing_zeros() as usize;
 
-	report
-}
+				let flat_idx = offset + bit_pos;
 
-/// # Safety
-///
-/// Calling this function before the active keymap was initiated is **undefined behavior**.
-pub unsafe fn construct_nkro_report(pressed_keys: [usize; PRESSED_KEYS_BITMAPS_LEN]) -> KeyboardNkroReport {
-	const USIZE_BITS: usize = usize::BITS as usize;
-	const NKRO_REP_LEN: usize = 34;
+				let keycode = keymaps.get_keycode(flat_idx);
 
-	// [report_id, modifier, keys...]
-	let mut report = [0_u8; NKRO_REP_LEN];
+				self.pressed_keys[flat_idx] = Some(keycode);
 
-	report[0] = KB_REP_ID_IN;
+				if let Some(layer) = is_layer(keycode) {
+					keymaps.enable_layer(layer);
+				} else if is_normal(keycode) {
+					let byte_idx = ((keycode.get() / 8) + 2) as usize;
+					let bit_idx = (keycode.get() % 8) as usize;
 
-	for (index, mut bitmap) in pressed_keys.into_iter().enumerate() {
-		let offset = index * USIZE_BITS;
-
-		while bitmap != 0 {
-			let pressed_bit = bitmap.trailing_zeros() as usize;
-
-			let flat_index = offset + pressed_bit;
-
-			// SAFETY: The caller gurantees the keymap was initiated.
-			let code = unsafe { get_keymap_keycode(flat_index) };
-
-			if let Some(code) = NonZeroU8::new(code) {
-				if is_normal_key(code) {
-					let key_code = code.get();
-
-					let byte_index = (key_code / 8) as usize + 2;
-					let bit_index = (key_code % 8) as usize;
-
-					if byte_index < NKRO_REP_LEN {
-						report[byte_index] |= 1 << bit_index;
-					}
-				} else if let Some(mod_code) = is_modifier_key(code) {
+					// This will always be within bounds because (u8::MAX / 8) + 2 = 33
+					report[byte_idx] |= 1 << bit_idx;
+				} else if let Some(mod_code) = is_modifier(keycode) {
 					report[1] |= mod_code.get();
 				}
+
+				set_bitmap &= !(1 << bit_pos);
 			}
 
-			// Clear the bit
-			bitmap &= !(1 << pressed_bit);
+			self.prev_scanned_keys[current_idx] = *current_bitmap;
 		}
+
+		if report != self.prev_nkro_report {
+			self.prev_nkro_report = report;
+
+			#[cfg(feature = "defmt")]
+			self.log_nkro_report();
+
+			return Some(&self.prev_nkro_report);
+		}
+
+		None
 	}
 
-	report
-}
+	#[cfg(feature = "defmt")]
+	pub fn log_6kro_report(&self) {
+		use core::fmt::Write;
 
-#[cfg(feature = "defmt")]
-pub fn log_6kro_report(report: Keyboard6kroReport) {
-	use core::fmt::Write;
+		let mut msg = heapless::String::<700>::new();
 
-	let mut msg = heapless::String::<500>::new();
+		writeln!(msg, "6KRO report sent:").ok();
 
-	let mut keys = report.iter();
+		let mut report = self.prev_6kro_report.iter();
 
-	// remove report id
-	keys.next();
+		// Remove report id.
+		report.next();
 
-	let modifier_msg = if keys.next().is_some_and(|&v| v == 0) {
-		"none"
-	} else {
-		"??"
-	};
+		write!(msg, "Modifiers: [").ok();
 
-	// remove reserved
-	keys.next();
-
-	let mut pressed_keys = heapless::String::<128>::new();
-
-	for (i, key) in keys.enumerate() {
-		if *key == 0 {
-			break;
+		if let Some(mod_byte) = report.next() {
+			write!(msg, "{mod_byte:08b}").ok();
 		}
 
-		if i != 0 {
-			write!(pressed_keys, ", ").unwrap();
+		writeln!(msg, "]").ok();
+
+		// Remove reserved byte.
+		report.next();
+
+		write!(msg, "Keys: [").ok();
+
+		for (i, key) in report.enumerate() {
+			if *key == 0 {
+				break;
+			}
+
+			if i != 0 {
+				write!(msg, ", ").ok();
+			}
+
+			write!(msg, "{key:#04X}").ok();
 		}
 
-		write!(pressed_keys, "0x{key:02}").unwrap();
+		writeln!(msg, "]").ok();
+
+		write!(msg, "---").ok();
+
+		defmt::debug!("{}", msg);
 	}
 
-	writeln!(msg, "6KRO report sent:").ok();
-	writeln!(msg, "Modifiers: {modifier_msg}").ok();
-	writeln!(msg, "Keys: [{pressed_keys}]").ok();
-	write!(msg, "---").ok();
+	#[cfg(feature = "defmt")]
+	pub fn log_nkro_report(&self) {
+		use core::fmt::Write;
 
-	defmt::info!("{}", msg);
-}
+		let mut msg = heapless::String::<1000>::new();
 
-#[cfg(feature = "defmt")]
-pub fn log_nkro_report(report: KeyboardNkroReport) {
-	use core::fmt::Write;
+		writeln!(msg, "NKRO report sent:").ok();
 
-	let mut msg = heapless::String::<500>::new();
+		let mut report = self.prev_nkro_report.iter();
 
-	let mut keys = report.iter();
+		// Remove report id.
+		report.next();
 
-	// remove report id
-	keys.next();
+		write!(msg, "Modifiers: [").ok();
 
-	let modifier_msg = if keys.next().is_some_and(|&v| v == 0) {
-		"none"
-	} else {
-		"??"
-	};
-
-	let mut pressed_keys = heapless::String::<500>::new();
-
-	for (i, key) in keys.enumerate() {
-		if *key == 0 {
-			continue;
+		if let Some(mod_byte) = report.next() {
+			write!(msg, "{mod_byte:08b}").ok();
 		}
 
-		if i != 0 {
-			write!(pressed_keys, ", ").unwrap();
+		writeln!(msg, "]").ok();
+
+		write!(msg, "Keys: [").ok();
+
+		for (i, key) in report.enumerate() {
+			let offset = i * u8::BITS as usize;
+
+			let mut key = *key;
+
+			while key != 0 {
+				let bit_pos = key.trailing_zeros() as usize;
+
+				let keycode = offset + bit_pos;
+
+				write!(msg, "{keycode:#04X}").ok();
+				write!(msg, ", ").ok();
+
+				key &= !(1 << bit_pos);
+			}
 		}
 
-		write!(pressed_keys, "0x{key:02}").unwrap();
+		writeln!(msg, "]").ok();
+
+		write!(msg, "---").ok();
+
+		defmt::debug!("{}", msg);
 	}
-
-	writeln!(msg, "NKRO report sent:").ok();
-	writeln!(msg, "Modifiers: {modifier_msg}").ok();
-	writeln!(msg, "Keys: [{pressed_keys}]").ok();
-	write!(msg, "---").ok();
-
-	defmt::info!("{}", msg);
 }

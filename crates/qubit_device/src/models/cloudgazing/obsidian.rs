@@ -30,7 +30,7 @@ pub const COL_PINS: [&str; COL_NUM] = ["B14", "B15"];
 #[rustfmt::skip]
 pub const LAYER0: Keymap<ROW_NUM, COL_NUM> = keymap! [
 	[KC_0, KC_1],
-	[KC_3, KC_4],
+	[KC_2, KC_LAYER_2],
 ];
 
 // Win keymap
@@ -43,18 +43,18 @@ pub const LAYER1: Keymap<ROW_NUM, COL_NUM> = keymap! [
 //
 #[rustfmt::skip]
 pub const LAYER2: Keymap<ROW_NUM, COL_NUM> = keymap! [
-	[KC_0, KC_1],
-	[KC_3, KC_4],
+	[KC_1, KC_6],
+	[KC_LAYER_3, KC_8],
 ];
 #[rustfmt::skip]
 pub const LAYER3: Keymap<ROW_NUM, COL_NUM> = keymap! [
-	[KC_0, KC_1],
-	[KC_3, KC_4],
+	[KC_A, KC_B],
+	[KC_C, KC_D],
 ];
 #[rustfmt::skip]
 pub const LAYER4: Keymap<ROW_NUM, COL_NUM> = keymap! [
-	[KC_0, KC_1],
-	[KC_3, KC_4],
+	[KC_E, KC_F],
+	[KC_G, KC_H],
 ];
 
 // Keyboard layout

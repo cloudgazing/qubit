@@ -11,7 +11,7 @@
 				}
 			},
 			"binary": {
-				"path": "/Users/cloudgazing/tmp/rust-analyzer-aarch64-apple-darwin",
+				"path": "/Users/cloudgazing/tmp/rust-analyzer-07-14",
 				"arguments": ["--no-log-buffering"]
 			}
 		}

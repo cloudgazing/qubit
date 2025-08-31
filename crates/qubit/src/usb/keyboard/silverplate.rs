@@ -2,7 +2,6 @@ use core::mem::size_of_val;
 
 use usbd_hid::hid_class::HIDClass;
 
-use super::CONFIG;
 use crate::DEVICE_CONFIG;
 use crate::setup::UsbBus;
 
@@ -76,24 +75,28 @@ pub fn process_vendor_report(hid_class: &HIDClass<UsbBus>, req_byte: u8) {
 
 			_ = hid_class.push_raw_input(&RESPONSE).is_ok();
 		}
+		#[allow(
+			clippy::match_same_arms,
+			reason = "This function needs to be rewritten but I allow this because I want to see what I was trying to do."
+		)]
 		0x02 => {
 			// req info
 
-			{
-				let keymap = &CONFIG.keymaps.keymap_0;
+			// {
+			// 	let keymap = &CONFIG.keymaps.keymap_0;
 
-				let size = keymap.len() as u64;
-				let size: [u8; 8] = size.to_le_bytes();
+			// 	let size = keymap.len() as u64;
+			// 	let size: [u8; 8] = size.to_le_bytes();
 
-				let response: [u8; 10 + 1] = [
-					0x05, // report id
-					0x00, // number of rows
-					0x00, // number of cols
-					size[0], size[1], size[2], size[3], size[4], size[5], size[6], size[7],
-				];
+			// 	let response: [u8; 10 + 1] = [
+			// 		0x05, // report id
+			// 		0x00, // number of rows
+			// 		0x00, // number of cols
+			// 		size[0], size[1], size[2], size[3], size[4], size[5], size[6], size[7],
+			// 	];
 
-				_ = hid_class.push_raw_input(&response).is_ok();
-			}
+			// 	_ = hid_class.push_raw_input(&response).is_ok();
+			// }
 
 			// {
 			// 	let keymap = unsafe { temp_get_active_keymap_ref() };

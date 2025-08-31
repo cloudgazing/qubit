@@ -10,7 +10,9 @@ use crate::setup::{UsbBus, UsbBusAllocator};
 mod keyboard;
 
 // USB singletons.
+#[unsafe(link_section = ".uninit.USB_BUS_ALLOC")]
 static mut USB_BUS_ALLOC: MaybeUninit<UsbBusAllocator> = MaybeUninit::uninit();
+#[unsafe(link_section = ".uninit.USB_DEVICE")]
 static mut USB_DEVICE: MaybeUninit<UsbDevice<UsbBus>> = MaybeUninit::uninit();
 
 #[derive(Debug)]
@@ -45,7 +47,7 @@ impl QubitDevice {
 		// The same order the classes were initialized needs to be used when polling the usb bus.
 		// See the [`poll_device`] function.
 
-		// SAFETY: Serial was initialized above and the caller guarantees this will be called only once.
+		// SAFETY: The caller guarantees this will be called only once.
 		#[cfg(keyboard)]
 		let keyboard = unsafe { keyboard::KeyboardInstance::new(usb_bus_alloc, matrix) };
 
