@@ -6,8 +6,8 @@ use std::path::PathBuf;
 
 use proc_macro2::TokenStream;
 use qubit_config::cargo::BuildCfgs;
-use qubit_config::general::Device;
-use qubit_config::linker::output_linker_script;
+use qubit_config::general::{Configuration, Device};
+use qubit_config::mcu::{McuPin as _, McuSpec};
 use quote::quote;
 
 // TODO: RA doesn't seem to work with `target-applies-to-host` option in config.toml
@@ -16,22 +16,24 @@ use quote::quote;
 qubit_macros::import_device!(QUBIT_AUTHOR, QUBIT_MODEL);
 
 fn keyboard_tokens() -> TokenStream {
-	let mcu = device::MCU.as_str();
+	let mcu = device::Mcu::STR;
 
-	let keymap = device::LAYER0.0.iter().map(|row| {
-		let row_tokens = row.iter().map(|&n| proc_macro2::Literal::u8_unsuffixed(n));
+	let keymap = device::BOOL_MATRIX.iter().map(|row| {
+		let row_tokens = row
+			.iter()
+			.map(|val| proc_macro2::Literal::u8_unsuffixed(u8::from(*val)));
 
 		quote! { [#(#row_tokens),*] }
 	});
 
 	let rows: Vec<_> = device::ROW_PINS
 		.iter()
-		.map(|&pin| pin.parse::<TokenStream>().unwrap())
+		.map(|pin| pin.pin_str().parse::<TokenStream>().unwrap())
 		.collect();
 
 	let cols: Vec<_> = device::COL_PINS
 		.iter()
-		.map(|&pin| pin.parse::<TokenStream>().unwrap())
+		.map(|pin| pin.pin_str().parse::<TokenStream>().unwrap())
 		.collect();
 
 	quote! {
@@ -80,19 +82,25 @@ fn main() {
 	let mut codegen_file = File::create_buffered(out.join("codegen.rs")).unwrap();
 	codegen(&mut codegen_file);
 
-	let mcu = device::MCU;
 	let device_type = device::DEVICE;
 
-	let memory_x = {
-		const KEYMAP_SIZE: usize = device::LAYER0.get_packed_size();
-
-		type Keymaps = qubit_config::keyboard::Keymaps<KEYMAP_SIZE>;
-
-		output_linker_script::<Keymaps>(mcu, device::FLASH, device_type)
-	};
-
 	let mut mem_x_file = File::create(out.join("memory.x")).unwrap();
-	mem_x_file.write_all(memory_x.as_bytes()).unwrap();
+
+	match device_type {
+		Device::Keyboard => {
+			let qubit_len = {
+				let config_size = std::mem::size_of::<Configuration>();
+				let config_size = u32::try_from(config_size).unwrap();
+
+				let keymaps_size = std::mem::size_of::<device::Keymaps>();
+				let keymaps_size = u32::try_from(keymaps_size).unwrap();
+
+				config_size.strict_add(keymaps_size)
+			};
+
+			device::Mcu::linker_layout(&mut mem_x_file, device::FLASH, qubit_len).unwrap();
+		}
+	}
 
 	println!("cargo:rustc-link-search={}", out.display());
 
@@ -108,18 +116,10 @@ fn main() {
 
 	match device_type {
 		Device::Keyboard => {
-			build_cfgs.check_cfg("keyboard");
-			build_cfgs.enable_cfg("keyboard");
+			let collected_pins =
+				qubit_config::cargo::collect_pins(&device::ROW_PINS, &device::COL_PINS, &device::LED_PIN).unwrap();
 
-			build_cfgs.check_keyboard_mcu_cfg();
-
-			qubit_config::cargo::output_cargo_instructions(
-				mcu,
-				&device::ROW_PINS,
-				&device::COL_PINS,
-				device::LED_PIN,
-				&mut build_cfgs,
-			);
+			build_cfgs.check_and_enable_keyboard_cfgs::<device::Mcu>(&collected_pins);
 		}
 	}
 

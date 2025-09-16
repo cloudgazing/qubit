@@ -1,10 +1,23 @@
+use core::fmt::Debug;
+use core::hash::Hash;
 use core::str::FromStr;
+#[cfg(feature = "build")]
+use std::collections::HashSet;
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy)]
+#[cfg(feature = "build")]
+use crate::cargo::BuildCfgs;
+
+pub mod rp2040;
+pub mod stm32f411;
+
+pub use rp2040::Rp2040;
+pub use stm32f411::Stm32f411;
+
 #[cfg_attr(feature = "std", derive(Deserialize, Serialize))]
+#[derive(Debug, Clone, Copy)]
 pub enum Mcu {
 	RP2040,
 	STM32F411,
@@ -52,3 +65,29 @@ impl FromStr for Mcu {
 		}
 	}
 }
+
+////////////////
+
+mod private {
+	pub trait Private {}
+
+	impl Private for super::rp2040::Rp2040 {}
+	impl Private for super::stm32f411::Stm32f411 {}
+}
+
+pub trait McuPin: Debug + Eq + Hash {
+	fn pin_str(&self) -> &'static str;
+}
+
+pub trait McuSpec: private::Private {
+	type Pin: McuPin;
+
+	const STR: &str;
+	const CFG_STR: &str;
+	const TARGET_TRIPLE: &str;
+
+	#[cfg(feature = "build")]
+	fn enable_cfgs(collected_pins: &HashSet<&Self::Pin>, build_cfgs: &mut BuildCfgs);
+}
+
+pub type Pin<T> = <T as McuSpec>::Pin;

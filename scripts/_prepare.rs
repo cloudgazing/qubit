@@ -3,11 +3,14 @@
 package.edition = "2024"
 
 [dependencies]
+qubit_config = { path = "../crates/qubit_config" }
 qubit_device = { path = "../crates/qubit_device" }
 qubit_macros = { path = "../crates/qubit_macros", default-features = false, features = ["import"] }
 ---
 
 use std::io::Write;
+
+use qubit_config::mcu::McuSpec as _;
 
 qubit_macros::import_device!(AUTHOR, MODEL);
 
@@ -15,14 +18,14 @@ fn main() {
 	let author = env!("AUTHOR");
 	let model = env!("MODEL");
 
-	let target_triple = device::MCU.target_triple();
-	let mcu = device::MCU.as_cfg_str();
+	let target_triple = device::Mcu::TARGET_TRIPLE;
+	let mcu_cfg = device::Mcu::CFG_STR;
 
 	let extension = format!(
 		r#"
 [build]
 target = "{target_triple}"
-rustflags = ["--cfg", 'mcu="{mcu}"']
+rustflags = ["--cfg", 'mcu="{mcu_cfg}"']
 
 [host]
 rustflags = ["--cfg", 'device="import"']

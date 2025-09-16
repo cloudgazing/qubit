@@ -8,14 +8,16 @@ license.workspace = true
 publish.workspace = true
 
 [dependencies]
+indoc = { workspace = true, optional = true }
+paste.workspace = true
 semver = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 toml = { workspace = true, optional = true }
 
 [features]
-build = ["std"]
 default = []
-std = ["semver/serde", "serde", "toml"]
+build = ["std"]
+std = ["indoc", "semver/serde", "serde", "toml"]
 
 [lints]
 workspace = true
