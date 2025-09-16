@@ -5,8 +5,8 @@ use qubit_config::keyboard::keycodes::{
 };
 
 use super::descriptor::KB_REP_ID_IN;
-use super::keymaps::{KeymapsState, Layer, PACKED_SIZE};
-use crate::codegen::KeyboardMatrix;
+use super::keymaps::{KeymapsState, Layer};
+use crate::codegen::{KeyboardMatrix, Keymaps};
 
 type ScannedKeys = [usize; KeyboardMatrix::BITMAP_COUNT];
 
@@ -65,7 +65,7 @@ pub struct ReportState {
 	prev_nkro_report: ReportNkro,
 
 	prev_scanned_keys: ScannedKeys,
-	pressed_keys: [Option<NonZeroU8>; PACKED_SIZE],
+	pressed_keys: [Option<NonZeroU8>; Keymaps::KEYMAP_SIZE],
 }
 
 impl ReportState {
@@ -75,7 +75,7 @@ impl ReportState {
 			prev_nkro_report: EMPTY_NKRO_REPORT,
 
 			prev_scanned_keys: [0; KeyboardMatrix::BITMAP_COUNT],
-			pressed_keys: [None; PACKED_SIZE],
+			pressed_keys: [None; Keymaps::KEYMAP_SIZE],
 		}
 	}
 

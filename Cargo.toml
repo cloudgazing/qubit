@@ -9,7 +9,7 @@ members = [
 default-members = ["crates/qubit"]
 
 [workspace.package]
-version = "0.0.180"
+version = "0.0.185"
 authors = ["cloudgazing"]
 edition = "2024"
 repository = "https://github.com/cloudgazing/qubit"
@@ -17,7 +17,7 @@ license = "MIT OR Apache-2.0"
 publish = false
 
 [workspace.dependencies]
-chrono = "0.4.41"
+chrono = "0.4.42"
 constcat = "0.6.1"
 cortex-m = { version = "0.7.7", features = ["inline-asm"] }
 cortex-m-rt = "0.7.5"
@@ -26,7 +26,9 @@ defmt-rtt = "1.0.0"
 embedded-hal = "1.0.0"
 fugit = "0.3.7"
 heapless = { version = "0.9.1" }
+indoc = "2.0.6"
 panic-probe = { version = "1.0.0", features = ["print-defmt"] }
+paste = "1.0.15"
 prettyplease = "0.2.37"
 proc-macro2 = "1.0.101"
 qubit_config = { path = "crates/qubit_config" }
@@ -35,13 +37,13 @@ qubit_macros = { path = "crates/qubit_macros" }
 quote = "1.0.40"
 rp2040-boot2 = "0.3.0"
 rp2040-hal = { version = "0.11.0", features = ["critical-section-impl", "rt"] }
-semver = "1.0.26"
-serde = { version = "1.0.219", features = ["derive"] }
+semver = "1.0.27"
+serde = { version = "1.0.225", features = ["derive"] }
 serde_arrays = "0.2.0"
-serde_json = "1.0.143"
+serde_json = "1.0.145"
 stm32f4xx-hal = { version = "0.22.1", features = ["usb_fs"] }
-syn = "2.0.106"
-toml = "0.9.5"
+syn = { version = "2.0.106", features = ["extra-traits", "full"] }
+toml = "0.9.6"
 usb-device = "0.3.2"
 usbd-hid = "0.8.2"
 usbd-serial = "0.2.2"

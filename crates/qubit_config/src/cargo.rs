@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::mcu::Mcu;
+use crate::mcu::{McuPin, McuSpec};
 
 #[derive(Debug, Default)]
 pub struct BuildCfgs {
@@ -47,57 +47,36 @@ impl BuildCfgs {
 		}
 	}
 
+	pub fn check_and_enable_cfg(&mut self, cfg: &str) {
+		self.check_cfg(cfg);
+		self.enable_cfg(cfg);
+	}
+
 	pub fn check_keyboard_mcu_cfg(&mut self) {
-		let mcus = ["rp2040", "stm32f411"];
+		use crate::mcu::{Rp2040, Stm32f411};
 
-		let values = mcus.map(|mcu| format!("\"{mcu}\"")).join(", ");
+		let mcus = [Rp2040::CFG_STR, Stm32f411::CFG_STR];
 
-		self.check_cfg(&format!("mcu, values({values})"));
+		let mcu_values = mcus.map(|mcu| format!("\"{mcu}\"")).join(", ");
+
+		self.check_cfg(&format!("mcu, values({mcu_values})"));
+	}
+
+	pub fn check_and_enable_keyboard_cfgs<M: McuSpec>(&mut self, collected_pins: &HashSet<&M::Pin>) {
+		use crate::mcu::{Rp2040, Stm32f411};
+
+		self.check_cfg("keyboard");
+		self.enable_cfg("keyboard");
+
+		let mcus = [Rp2040::CFG_STR, Stm32f411::CFG_STR];
+
+		let mcu_values = mcus.map(|mcu| format!("\"{mcu}\"")).join(", ");
+
+		self.check_cfg(&format!("mcu, values({mcu_values})"));
+
+		M::enable_cfgs(collected_pins, self);
 	}
 }
-
-/// # Panics
-///
-/// Panics if a pin is used more than once.
-pub fn output_cargo_instructions<const R: usize, const C: usize>(
-	mcu: Mcu,
-	row: &[&str; R],
-	col: &[&str; C],
-	led: Option<&str>,
-	build_cfgs: &mut BuildCfgs,
-) {
-	match mcu {
-		Mcu::RP2040 => {}
-		Mcu::STM32F411 => {
-			let pins = collect_pins(row, col, led).unwrap();
-
-			let bank_enabled = pins.iter().any(|pin| pin.starts_with('B'));
-			build_cfgs.if_enable_cfg("stm32f411_bank_b", bank_enabled);
-
-			let bank_enabled = pins.iter().any(|pin| pin.starts_with('C'));
-			build_cfgs.if_enable_cfg("stm32f411_bank_c", bank_enabled);
-
-			let bank_enabled = pins.iter().any(|pin| pin.starts_with('D'));
-			build_cfgs.if_enable_cfg("stm32f411_bank_d", bank_enabled);
-
-			let bank_enabled = pins.iter().any(|pin| pin.starts_with('E'));
-			build_cfgs.if_enable_cfg("stm32f411_bank_e", bank_enabled);
-
-			let bank_enabled = pins.iter().any(|pin| pin.starts_with('H'));
-			build_cfgs.if_enable_cfg("stm32f411_bank_h", bank_enabled);
-
-			build_cfgs.check_cfgs(&[
-				"stm32f411_bank_b",
-				"stm32f411_bank_c",
-				"stm32f411_bank_d",
-				"stm32f411_bank_e",
-				"stm32f411_bank_h",
-			]);
-		}
-	}
-}
-
-///////////
 
 #[derive(Debug)]
 pub enum ErrReason {
@@ -106,14 +85,14 @@ pub enum ErrReason {
 }
 
 #[derive(Debug)]
-pub struct PinCollectError<'a> {
+pub struct PinCollectError<'a, P: McuPin> {
 	pub reason: ErrReason,
-	pub pin: &'a str,
+	pub pin: &'a P,
 }
 
-impl<'a> PinCollectError<'a> {
+impl<'a, P: McuPin> PinCollectError<'a, P> {
 	#[must_use]
-	pub fn reserved(pin: &'a str) -> Self {
+	pub fn reserved(pin: &'a P) -> Self {
 		Self {
 			reason: ErrReason::Reserved,
 			pin,
@@ -121,7 +100,7 @@ impl<'a> PinCollectError<'a> {
 	}
 
 	#[must_use]
-	pub fn duplicate(pin: &'a str) -> Self {
+	pub fn duplicate(pin: &'a P) -> Self {
 		Self {
 			reason: ErrReason::Duplicate,
 			pin,
@@ -133,36 +112,30 @@ impl<'a> PinCollectError<'a> {
 ///
 /// # Errors
 ///
-/// Returns an error if a pin is used more than once.
-pub fn collect_pins<'a, const R: usize, const C: usize>(
-	row: &[&'a str; R],
-	col: &[&'a str; C],
-	led: Option<&'a str>,
-) -> Result<HashSet<&'a str>, PinCollectError<'a>> {
+/// Returns an error if a pin is used more than once or is already reserved.
+pub fn collect_pins<'a, P: McuPin, const R: usize, const C: usize>(
+	row: &'a [P; R],
+	col: &'a [P; C],
+	led: &'a Option<P>,
+) -> Result<HashSet<&'a P>, PinCollectError<'a, P>> {
 	let mut pins = HashSet::new();
 
-	for p in row {
-		let is_new = pins.insert(*p);
-
-		if !is_new {
-			return Err(PinCollectError::duplicate(p));
+	for pin in row {
+		if !pins.insert(pin) {
+			return Err(PinCollectError::duplicate(pin));
 		}
 	}
 
-	for p in col {
-		let is_new = pins.insert(*p);
-
-		if !is_new {
-			return Err(PinCollectError::duplicate(p));
+	for pin in col {
+		if !pins.insert(pin) {
+			return Err(PinCollectError::duplicate(pin));
 		}
 	}
 
-	if let Some(p) = led {
-		let is_new = pins.insert(p);
-
-		if !is_new {
-			return Err(PinCollectError::duplicate(p));
-		}
+	if let Some(pin) = led
+		&& !pins.insert(pin)
+	{
+		return Err(PinCollectError::duplicate(pin));
 	}
 
 	Ok(pins)

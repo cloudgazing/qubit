@@ -1,18 +1,10 @@
 use core::num::NonZeroU8;
 
-pub(super) const PACKED_SIZE: usize = crate::codegen::LAYER0.get_packed_size();
-
-pub type Keymaps = qubit_config::keyboard::Keymaps<PACKED_SIZE>;
+use crate::codegen::{KEYMAPS, Keymaps};
 
 #[used]
-#[unsafe(link_section = ".keyboard")]
-static DEFAULT_KEYMAPS: Keymaps = Keymaps {
-	keymap_0: crate::codegen::LAYER0.get_packed(),
-	keymap_1: crate::codegen::LAYER1.get_packed(),
-	keymap_2: crate::codegen::LAYER2.get_packed(),
-	keymap_3: crate::codegen::LAYER3.get_packed(),
-	keymap_4: crate::codegen::LAYER4.get_packed(),
-};
+#[unsafe(link_section = ".qubit.DEFAULT_KEYMAPS")]
+static DEFAULT_KEYMAPS: Keymaps = KEYMAPS;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Layer {

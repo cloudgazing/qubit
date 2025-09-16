@@ -16,11 +16,11 @@ chrono = { workspace = true, optional = true }
 proc-macro2 = { workspace = true, optional = true }
 qubit_config = { workspace = true, optional = true }
 quote.workspace = true
-syn = { workspace = true, features = ["extra-traits", "full", "parsing"] }
+syn.workspace = true
 
 [features]
-all = ["chrono", "import", "proc-macro2", "qubit_config"]
 default = ["all"]
+all = ["chrono", "import", "proc-macro2", "qubit_config"]
 import = []
 
 [lints]

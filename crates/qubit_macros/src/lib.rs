@@ -1,5 +1,6 @@
 //! Procedural macros for the Qubit firmware.
 
+#![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
 use proc_macro::TokenStream;

@@ -30,7 +30,7 @@ mod codegen {
 }
 
 #[used]
-#[unsafe(link_section = ".configuration")]
+#[unsafe(link_section = ".qubit.DEVICE_CONFIG")]
 static DEVICE_CONFIG: Configuration = Configuration {
 	name: codegen::NAME,
 	author: codegen::AUTHOR,

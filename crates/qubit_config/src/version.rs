@@ -38,7 +38,7 @@ impl Version {
 	}
 
 	#[must_use]
-	pub const fn new_zero(major: u16, minor: u16, patch: u16) -> Self {
+	pub const fn api_zero(major: u16, minor: u16, patch: u16) -> Self {
 		Self {
 			api: Api::V0,
 			major,
